@@ -1,0 +1,15 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index"
+    },
+    {
+      "source": "/((?!api/|favicon\\.ico|favicon-48x48\\.png|favicon-192x192\\.png|favicon-512x512\\.png|apple-touch-icon\\.png|robots\\.txt|sitemap\\.xml|assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

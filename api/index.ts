@@ -18,9 +18,11 @@ app.use(express.json({ limit: "10mb" }));
 const SOURCE_DB_PATH = path.join(process.cwd(), "src", "db", "db.json");
 const WRITABLE_DB_PATH = process.env.VERCEL ? "/tmp/biotechagro-db.json" : SOURCE_DB_PATH;
 const PUBLIC_DATA_BLOB_PATH = "data/public-content.json";
+const ADMIN_USERS_BLOB_PATH = "data/admin-users.json";
 const SESSION_SECRET = process.env.SESSION_SECRET || "mycotunisia_secret_session_2026";
 
 let publicDataCache: any | null = null;
+let adminUsersCache: AdminUser[] | null = null;
 
 function ensureWritableDB() {
   try {
@@ -370,44 +372,243 @@ async function sendContactInquiryEmail(adminEmail: string, inquiry: { senderName
 }
 
 
+
+// ==========================================
+// ADMIN USERS / ROLES / SESSIONS
+// ==========================================
+
+type AdminRole = "owner" | "admin" | "editor";
+
+type AdminUser = {
+  username: string;
+  displayName: string;
+  email: string;
+  role: AdminRole;
+  passwordSalt: string;
+  passwordHash: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLogin?: string;
+  lastSeenAt?: string;
+  resetCode?: {
+    code: string;
+    expiresAt: number;
+  } | null;
+};
+
+function normalizeUsername(value: string) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "");
+}
+
+function makePasswordHash(password: string, salt = crypto.randomBytes(16).toString("hex")) {
+  const passwordHash = crypto
+    .createHmac("sha256", salt)
+    .update(password)
+    .digest("hex");
+
+  return {
+    passwordSalt: salt,
+    passwordHash
+  };
+}
+
+function isUserOnline(lastSeenAt?: string) {
+  if (!lastSeenAt) return false;
+
+  const lastSeenTime = new Date(lastSeenAt).getTime();
+
+  if (Number.isNaN(lastSeenTime)) return false;
+
+  // Serverless-safe "online" status:
+  // if the user pinged the backend during the last 2 minutes, show Connected.
+  return Date.now() - lastSeenTime < 2 * 60 * 1000;
+}
+
+function publicAdminUser(user: AdminUser) {
+  return {
+    username: user.username,
+    displayName: user.displayName,
+    email: user.email,
+    role: user.role,
+    isActive: user.isActive,
+    createdAt: user.createdAt,
+    lastLogin: user.lastLogin || "",
+    lastSeenAt: user.lastSeenAt || "",
+    isOnline: isUserOnline(user.lastSeenAt)
+  };
+}
+
+async function readAdminUsersFromBlob(): Promise<AdminUser[] | null> {
+  try {
+    if (adminUsersCache) {
+      return adminUsersCache;
+    }
+
+    const result = await get(ADMIN_USERS_BLOB_PATH, { access: "public" });
+
+    if (!result || result.statusCode !== 200 || !result.stream) {
+      return null;
+    }
+
+    const text = await new Response(result.stream).text();
+    const parsed = JSON.parse(text);
+
+    if (!Array.isArray(parsed)) {
+      return null;
+    }
+
+    adminUsersCache = parsed;
+    return parsed;
+  } catch (error: any) {
+    // Normal on the first deployment before data/admin-users.json exists.
+    console.warn("Admin users Blob not found yet. Seeding from existing admin settings.", error?.message || error);
+    return null;
+  }
+}
+
+async function writeAdminUsersToBlob(users: AdminUser[]) {
+  adminUsersCache = users;
+
+  await put(ADMIN_USERS_BLOB_PATH, JSON.stringify(users, null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0
+  });
+
+  return users;
+}
+
+async function getAdminUsers(seedDb?: any): Promise<AdminUser[]> {
+  const blobUsers = await readAdminUsersFromBlob();
+
+  if (blobUsers && blobUsers.length > 0) {
+    return blobUsers;
+  }
+
+  const db = seedDb || readLocalDBState() || {};
+  const adminSettings = db.adminSettings || {};
+
+  let passwordSalt = adminSettings.passwordSalt || "";
+  let passwordHash = adminSettings.passwordHash || "";
+
+  if (!passwordSalt || !passwordHash) {
+    const generated = makePasswordHash(process.env.DEFAULT_ADMIN_PASSWORD || "admin123");
+    passwordSalt = generated.passwordSalt;
+    passwordHash = generated.passwordHash;
+  }
+
+  const now = new Date().toISOString();
+
+  // First account of the project:
+  // username "admin" is the main owner account.
+  const seedUsers: AdminUser[] = [
+    {
+      username: "admin",
+      displayName: "Main Admin",
+      email: adminSettings.adminEmail || "biotechagro.digital@gmail.com",
+      role: "owner",
+      passwordSalt,
+      passwordHash,
+      isActive: true,
+      createdAt: now,
+      lastLogin: adminSettings.lastLogin || "",
+      lastSeenAt: ""
+    }
+  ];
+
+  await writeAdminUsersToBlob(seedUsers);
+
+  return seedUsers;
+}
+
 // Secure token helpers using standard node:crypto (HMAC timing-safe token)
 function generateSessionToken(username: string): string {
+  const cleanUsername = normalizeUsername(username);
   const expires = Date.now() + 1000 * 60 * 60 * 24; // Valid for 24 hours
-  const hmacInput = `${username}:${expires}`;
+  const hmacInput = `${cleanUsername}:${expires}`;
   const hmac = crypto.createHmac("sha256", SESSION_SECRET).update(hmacInput).digest("hex");
-  return `${username}:${expires}:${hmac}`;
+  return `${cleanUsername}:${expires}:${hmac}`;
 }
 
-function verifySessionToken(token?: string): boolean {
-  if (!token) return false;
+function getSessionUsernameFromToken(token?: string): string | null {
+  if (!token) return null;
+
   const parts = token.split(":");
-  if (parts.length !== 3) return false;
+  if (parts.length !== 3) return null;
+
   const [username, expiresStr, hmacDigest] = parts;
   const expires = parseInt(expiresStr, 10);
-  if (isNaN(expires) || expires < Date.now()) return false;
 
-  const hmacInput = `${username}:${expires}`;
-  const computedHmac = crypto.createHmac("sha256", SESSION_SECRET).update(hmacInput).digest("hex");
+  if (!username || Number.isNaN(expires) || expires < Date.now()) {
+    return null;
+  }
+
+  const cleanUsername = normalizeUsername(username);
+  const hmacInput = `${cleanUsername}:${expires}`;
+  const computedHmac = crypto
+    .createHmac("sha256", SESSION_SECRET)
+    .update(hmacInput)
+    .digest("hex");
 
   try {
-    return crypto.timingSafeEqual(Buffer.from(hmacDigest), Buffer.from(computedHmac));
+    const valid = crypto.timingSafeEqual(
+      Buffer.from(hmacDigest),
+      Buffer.from(computedHmac)
+    );
+
+    return valid ? cleanUsername : null;
   } catch (err) {
-    return false;
+    return null;
   }
 }
 
-// Middleware to secure administrator endpoints
-function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Access denied. Private session missing." });
-  }
-  const token = authHeader.split(" ")[1];
-  if (verifySessionToken(token)) {
+// Middleware to secure administrator endpoints.
+// Any active owner/admin/editor can pass this.
+async function requireAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ error: "Access denied. Private session missing." });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const username = getSessionUsernameFromToken(token);
+
+    if (!username) {
+      return res.status(403).json({ error: "Invalid or expired admin session token." });
+    }
+
+    const users = await getAdminUsers();
+    const user = users.find((u) => u.username === normalizeUsername(username));
+
+    if (!user || !user.isActive) {
+      return res.status(403).json({ error: "Admin account is inactive or no longer exists." });
+    }
+
+    (req as any).adminUser = user;
     next();
-  } else {
-    res.status(403).json({ error: "Invalid or expired admin session token." });
+  } catch (error: any) {
+    console.error("Admin authorization failed:", error);
+    return res.status(500).json({ error: error?.message || "Admin authorization failed." });
   }
+}
+
+// Owner-only middleware.
+// Only users with role "owner" can see/manage the Users Panel.
+function requireOwner(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const user = (req as any).adminUser as AdminUser | undefined;
+
+  if (!user || user.role !== "owner") {
+    return res.status(403).json({ error: "Owner access required." });
+  }
+
+  next();
 }
 
 app.post("/api/media/upload", requireAdmin, async (req, res) => {
@@ -552,156 +753,231 @@ app.post("/api/messages", async (req, res) => {
 
 // Authentication log in
 app.post("/api/auth/login", async (req, res) => {
-  const { username, password } = req.body;
-  if (!username || !password) {
-    return res.status(400).json({ error: "Missing login details." });
-  }
+  try {
+    const { username, password } = req.body;
 
-  const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
+    if (!username || !password) {
+      return res.status(400).json({ error: "Missing login details." });
+    }
 
-  const adminSettings = db.adminSettings;
-  if (!adminSettings) {
-    return res.status(500).json({ error: "Admin configuration state missing." });
-  }
+    const cleanUsername = normalizeUsername(username);
 
-  let isMatch = false;
+    const db = await getDBState();
+    if (!db) return res.status(500).json({ error: "Database state inaccessible." });
 
-  // Defensive fallback helper to enable instant logins (only if default password is not overridden)
-  const isDefaultActive = adminSettings.isDefaultPassword !== false;
-  if (isDefaultActive && (password === "admin" || password === "mycoadmin" || password === "admin123")) {
-    isMatch = true;
-  } else {
-    const salt = adminSettings.passwordSalt || "myco_tunisia_salt_2026";
-    const hash = crypto.createHmac("sha256", salt).update(password).digest("hex");
-    isMatch = hash === adminSettings.passwordHash;
-  }
+    const users = await getAdminUsers(db);
+    const userIndex = users.findIndex((u) => u.username === cleanUsername);
+    const user = userIndex >= 0 ? users[userIndex] : null;
 
-  if (username.toLowerCase() === "admin" && isMatch) {
-    const token = generateSessionToken("admin");
-    // Securely record login timestamp
-    db.adminSettings.lastLogin = new Date().toISOString();
+    if (!user || !user.isActive) {
+      return res.status(401).json({ error: "Incorrect administrator login credentials." });
+    }
+
+    const attemptedHash = crypto
+      .createHmac("sha256", user.passwordSalt)
+      .update(password)
+      .digest("hex");
+
+    let isMatch = attemptedHash === user.passwordHash;
+
+    // Legacy fallback for the first owner account only.
+    // This keeps a copied project accessible until you set a strong password.
+    const adminSettings = db.adminSettings || {};
+    const allowLegacyDefault =
+      cleanUsername === "admin" &&
+      user.role === "owner" &&
+      adminSettings.isDefaultPassword !== false &&
+      (password === "admin" || password === "mycoadmin" || password === "admin123");
+
+    if (!isMatch && allowLegacyDefault) {
+      isMatch = true;
+    }
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Incorrect administrator login credentials." });
+    }
+
+    const now = new Date().toISOString();
+
+    users[userIndex] = {
+      ...user,
+      lastLogin: now,
+      lastSeenAt: now,
+      resetCode: null
+    };
+
+    await writeAdminUsersToBlob(users);
+
+    // Keep legacy adminSettings updated for existing email/notification code.
+    db.adminSettings = {
+      ...(db.adminSettings || {}),
+      adminEmail: users[userIndex].email,
+      lastLogin: now
+    };
+
     await saveDBState(db);
 
-    res.json({ success: true, token });
-  } else {
-    res.status(401).json({ error: "Incorrect administrator login credentials." });
+    const token = generateSessionToken(users[userIndex].username);
+
+    return res.json({
+      success: true,
+      token,
+      user: publicAdminUser(users[userIndex])
+    });
+  } catch (error: any) {
+    console.error("Admin login failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Admin login failed."
+    });
   }
 });
 
-// Request a password reset code sent to the registered email
+// Request a password reset code sent to the registered admin email
 app.post("/api/auth/request-reset", async (req, res) => {
-  const { email } = req.body;
-  if (!email) {
-    return res.status(400).json({ error: "Email address is required." });
-  }
+  try {
+    const { email } = req.body;
 
-  const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
-
-  const adminSettings = db.adminSettings || {};
-  const adminEmail = adminSettings.adminEmail || "biotechagro.digital@gmail.com";
-
-  if (email.trim().toLowerCase() !== adminEmail.toLowerCase()) {
-    return res.status(400).json({ error: "The provided email does not match our administrator registry." });
-  }
-
-  // Generate a random 6-digit verification code
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiresAt = Date.now() + 10 * 60 * 1000; // valid for 10 minutes
-
-  db.adminSettings = {
-    ...db.adminSettings,
-    adminEmail,
-    resetCode: {
-      code,
-      expiresAt,
+    if (!email) {
+      return res.status(400).json({ error: "Email address is required." });
     }
-  };
 
-  await saveDBState(db);
+    const users = await getAdminUsers();
+    const cleanEmail = String(email).trim().toLowerCase();
 
-  // Print highly stylized mock email delivery card to the console logs
-  console.log(`\n=============================================================`);
-  console.log(`✉️  SECURE EMAIL DELIVERY SYSTEM (Biotech Agro Laboratory)`);
-  console.log(`-------------------------------------------------------------`);
-  console.log(`To:       ${adminEmail}`);
-  console.log(`Subject:  Lab Administrative Code Verification Reset`);
-  console.log(`Code:     ${code}`);
-  console.log(`Alert:    This code is valid for 10 minutes. Please enter`);
-  console.log(`          it on the security console to reset the password.`);
-  console.log(`=============================================================\n`);
+    const userIndex = users.findIndex(
+      (u) => u.email.toLowerCase() === cleanEmail && u.isActive
+    );
 
-  // Attempt real SMTP execution if configured
-  const mailResult = await sendResetCodeEmail(adminEmail, code);
+    if (userIndex === -1) {
+      return res.status(400).json({ error: "No active admin account uses this email." });
+    }
 
-  if (mailResult.realSent) {
-    // If sent via real SMTP, do not expose simulatedCode in client response for highest production security!
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = Date.now() + 10 * 60 * 1000; // valid for 10 minutes
+
+    users[userIndex] = {
+      ...users[userIndex],
+      resetCode: {
+        code,
+        expiresAt
+      }
+    };
+
+    await writeAdminUsersToBlob(users);
+
+    const adminEmail = users[userIndex].email;
+
+    console.log(`\n=============================================================`);
+    console.log(`✉️  SECURE EMAIL DELIVERY SYSTEM (Biotech Agro Laboratory)`);
+    console.log(`-------------------------------------------------------------`);
+    console.log(`To:       ${adminEmail}`);
+    console.log(`Subject:  Lab Administrative Code Verification Reset`);
+    console.log(`Code:     ${code}`);
+    console.log(`Alert:    This code is valid for 10 minutes.`);
+    console.log(`=============================================================\n`);
+
+    const mailResult = await sendResetCodeEmail(adminEmail, code);
+
+    if (mailResult.realSent) {
+      return res.json({
+        success: true,
+        message: `A secure verification code has been dispatched to ${adminEmail} via Biotech-Agro Mail routing.`,
+        realSent: true
+      });
+    }
+
+    if (mailResult.error) {
+      return res.status(500).json({
+        error: `Failed to dispatch secure email over SMTP gateway (${process.env.SMTP_HOST || "smtp.gmail.com"}). Reason: ${mailResult.error}.`
+      });
+    }
+
     return res.json({
       success: true,
-      message: `A secure verification code has been dispatched to ${adminEmail} via Biotech-Agro Mail routing.`,
-      realSent: true,
+      message: `A security code has been generated for ${adminEmail} (Simulated Sandbox)`,
+      simulatedCode: code,
+      realSent: false
     });
-  } else if (mailResult.error) {
-    // If SMTP is configured but failed to deliver, return descriptive error so they can debug credentials
+  } catch (error: any) {
+    console.error("Password reset request failed:", error);
+
     return res.status(500).json({
-      error: `Failed to dispatch secure email over SMTP gateway (${process.env.SMTP_HOST || "smtp.gmail.com"}). Reason: ${mailResult.error}. Please double-check your SMTP login, port, and security credentials.`
+      error: error?.message || "Password reset request failed."
     });
   }
-
-  // Otherwise, fallback to Simulated Sandbox representation
-  res.json({
-    success: true,
-    message: `A security code has been sent to ${adminEmail} (Simulated Sandbox)`,
-    simulatedCode: code, // returned so they can easily reset/test it in the client preview environment
-    realSent: false,
-  });
 });
 
 // Reset password with a valid reset code
 app.post("/api/auth/reset-password", async (req, res) => {
-  const { email, code, newPassword } = req.body;
-  if (!email || !code || !newPassword) {
-    return res.status(400).json({ error: "Missing email, code, or new password." });
+  try {
+    const { email, code, newPassword } = req.body;
+
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: "Missing email, code, or new password." });
+    }
+
+    if (String(newPassword).trim().length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long." });
+    }
+
+    const users = await getAdminUsers();
+    const cleanEmail = String(email).trim().toLowerCase();
+
+    const userIndex = users.findIndex(
+      (u) => u.email.toLowerCase() === cleanEmail && u.isActive
+    );
+
+    if (userIndex === -1) {
+      return res.status(400).json({ error: "No active admin account uses this email." });
+    }
+
+    const user = users[userIndex];
+    const resetInfo = user.resetCode;
+
+    if (!resetInfo || resetInfo.code !== String(code).trim() || Date.now() > resetInfo.expiresAt) {
+      return res.status(400).json({ error: "Invalid, expired, or missing verification reset code." });
+    }
+
+    const newHash = makePasswordHash(String(newPassword).trim());
+
+    users[userIndex] = {
+      ...user,
+      passwordSalt: newHash.passwordSalt,
+      passwordHash: newHash.passwordHash,
+      resetCode: null
+    };
+
+    await writeAdminUsersToBlob(users);
+
+    // Keep legacy adminSettings aligned when the main owner account resets password.
+    if (users[userIndex].username === "admin") {
+      const db = await getDBState();
+      if (db) {
+        db.adminSettings = {
+          ...(db.adminSettings || {}),
+          passwordSalt: newHash.passwordSalt,
+          passwordHash: newHash.passwordHash,
+          isDefaultPassword: false,
+          lastLogin: new Date().toISOString(),
+          resetCode: null
+        };
+
+        await saveDBState(db);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: "Password reset successfully."
+    });
+  } catch (error: any) {
+    console.error("Password reset failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Password reset failed."
+    });
   }
-  if (newPassword.trim().length < 4) {
-    return res.status(400).json({ error: "Password must be at least 4 characters long." });
-  }
-
-  const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
-
-  const adminSettings = db.adminSettings || {};
-  const adminEmail = adminSettings.adminEmail || "biotechagro.digital@gmail.com";
-
-  if (email.trim().toLowerCase() !== adminEmail.toLowerCase()) {
-    return res.status(400).json({ error: "Provided email address mismatch." });
-  }
-
-  const resetInfo = adminSettings.resetCode;
-  if (!resetInfo || resetInfo.code !== code.trim() || Date.now() > resetInfo.expiresAt) {
-    return res.status(400).json({ error: "Invalid, expired, or missing verification reset code." });
-  }
-
-  // Update password hashes
-  const newSalt = crypto.randomBytes(16).toString("hex");
-  const newHash = crypto.createHmac("sha256", newSalt).update(newPassword.trim()).digest("hex");
-
-  db.adminSettings = {
-    ...db.adminSettings,
-    passwordSalt: newSalt,
-    passwordHash: newHash,
-    isDefaultPassword: false,
-    lastLogin: new Date().toISOString(),
-    resetCode: null, // Clear reset code
-  };
-
-  await saveDBState(db);
-
-  res.json({
-    success: true,
-    message: "Admin password successfully reset! Insecure fallback defaults have been permanently disabled.",
-  });
 });
 
 // ==========================================
@@ -710,7 +986,46 @@ app.post("/api/auth/reset-password", async (req, res) => {
 
 // Validate current token
 app.get("/api/auth/verify", requireAdmin, (req, res) => {
-  res.json({ success: true, username: "admin" });
+  const user = (req as any).adminUser as AdminUser;
+
+  return res.json({
+    success: true,
+    username: user.username,
+    user: publicAdminUser(user)
+  });
+});
+
+// Update the current user's last online timestamp.
+// The frontend calls this every minute while the admin console is open.
+app.post("/api/auth/ping", requireAdmin, async (req, res) => {
+  try {
+    const currentUser = (req as any).adminUser as AdminUser;
+    const users = await getAdminUsers();
+
+    const updatedUsers = users.map((user) =>
+      user.username === currentUser.username
+        ? {
+            ...user,
+            lastSeenAt: new Date().toISOString()
+          }
+        : user
+    );
+
+    await writeAdminUsersToBlob(updatedUsers);
+
+    const updatedUser = updatedUsers.find((u) => u.username === currentUser.username);
+
+    return res.json({
+      success: true,
+      user: updatedUser ? publicAdminUser(updatedUser) : null
+    });
+  } catch (error: any) {
+    console.error("Admin ping failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Admin ping failed."
+    });
+  }
 });
 
 app.post("/api/admin/sync-public-data", requireAdmin, async (req, res) => {
@@ -732,62 +1047,386 @@ app.post("/api/admin/sync-public-data", requireAdmin, async (req, res) => {
   });
 });
 
-
-
-
 // Get current secure admin details
 app.get("/api/auth/settings", requireAdmin, async (req, res) => {
-  const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
-  const settings = db.adminSettings || {};
-  res.json({
-    adminEmail: settings.adminEmail || "biotechagro.digital@gmail.com",
-    isDefaultPassword: settings.isDefaultPassword !== false,
-    lastLogin: settings.lastLogin || ""
+  const user = (req as any).adminUser as AdminUser;
+
+  return res.json({
+    username: user.username,
+    displayName: user.displayName,
+    adminEmail: user.email,
+    role: user.role,
+    isDefaultPassword: false,
+    lastLogin: user.lastLogin || "",
+    lastSeenAt: user.lastSeenAt || ""
   });
 });
 
-// Update Admin Registered Security Email
+// Update current admin user's email
 app.put("/api/auth/update-email", requireAdmin, async (req, res) => {
-  const { email } = req.body;
-  if (!email || !email.includes("@")) {
-    return res.status(400).json({ error: "A valid email is required." });
+  try {
+    const { email } = req.body;
+
+    if (!email || !String(email).includes("@")) {
+      return res.status(400).json({ error: "A valid email is required." });
+    }
+
+    const currentUser = (req as any).adminUser as AdminUser;
+    const users = await getAdminUsers();
+    const cleanEmail = String(email).trim();
+
+    const duplicate = users.find(
+      (u) =>
+        u.email.toLowerCase() === cleanEmail.toLowerCase() &&
+        u.username !== currentUser.username
+    );
+
+    if (duplicate) {
+      return res.status(400).json({ error: "This email is already used by another admin account." });
+    }
+
+    const updatedUsers = users.map((u) =>
+      u.username === currentUser.username
+        ? { ...u, email: cleanEmail }
+        : u
+    );
+
+    await writeAdminUsersToBlob(updatedUsers);
+
+    // Keep legacy contact/settings behavior aligned with the main admin owner email.
+    if (currentUser.username === "admin") {
+      const db = await getDBState();
+      if (db) {
+        db.adminSettings = {
+          ...(db.adminSettings || {}),
+          adminEmail: cleanEmail
+        };
+        await saveDBState(db);
+      }
+    }
+
+    return res.json({
+      success: true,
+      email: cleanEmail,
+      message: "Admin email updated successfully."
+    });
+  } catch (error: any) {
+    console.error("Update email failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to update email."
+    });
   }
-
- const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
-
-  db.adminSettings = db.adminSettings || {};
-  db.adminSettings.adminEmail = email.trim();
-
-  await saveDBState(db);
-  res.json({ success: true, email: db.adminSettings.adminEmail, message: "Registered laboratory email updated!" });
 });
 
-// Update Admin Password
+// Update current admin user's password
 app.put("/api/auth/update-password", requireAdmin, async (req, res) => {
-  const { newPassword } = req.body;
-  if (!newPassword || newPassword.trim().length < 4) {
-    return res.status(400).json({ error: "Password must be at least 4 characters long." });
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || String(newPassword).trim().length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long." });
+    }
+
+    const currentUser = (req as any).adminUser as AdminUser;
+    const users = await getAdminUsers();
+    const newHash = makePasswordHash(String(newPassword).trim());
+
+    const updatedUsers = users.map((u) =>
+      u.username === currentUser.username
+        ? {
+            ...u,
+            passwordSalt: newHash.passwordSalt,
+            passwordHash: newHash.passwordHash,
+            resetCode: null
+          }
+        : u
+    );
+
+    await writeAdminUsersToBlob(updatedUsers);
+
+    // Keep legacy adminSettings aligned when the main owner changes password.
+    if (currentUser.username === "admin") {
+      const db = await getDBState();
+      if (db) {
+        db.adminSettings = {
+          ...(db.adminSettings || {}),
+          passwordSalt: newHash.passwordSalt,
+          passwordHash: newHash.passwordHash,
+          isDefaultPassword: false,
+          lastLogin: new Date().toISOString()
+        };
+        await saveDBState(db);
+      }
+    }
+
+    return res.json({
+      success: true,
+      message: "Your password was updated successfully."
+    });
+  } catch (error: any) {
+    console.error("Update password failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to update password."
+    });
   }
-
-  const db = await getDBState();
-  if (!db) return res.status(500).json({ error: "Database state inaccessible." });
-
-  const newSalt = crypto.randomBytes(16).toString("hex");
-  const newHash = crypto.createHmac("sha256", newSalt).update(newPassword.trim()).digest("hex");
-
-  db.adminSettings = {
-    ...db.adminSettings,
-    passwordSalt: newSalt,
-    passwordHash: newHash,
-    isDefaultPassword: false,
-    lastLogin: new Date().toISOString(),
-  };
-
-  await saveDBState(db);
-  res.json({ success: true, message: "Administrator password updated successfully and default pass overridden!" });
 });
+
+// Owner-only admin user management
+app.get("/api/admin/users", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const users = await getAdminUsers();
+
+    return res.json({
+      success: true,
+      users: users.map(publicAdminUser)
+    });
+  } catch (error: any) {
+    console.error("Load admin users failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to load admin users."
+    });
+  }
+});
+
+app.post("/api/admin/users", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const { username, displayName, email, password, role } = req.body;
+
+    const cleanUsername = normalizeUsername(username);
+
+    if (!cleanUsername) {
+      return res.status(400).json({ error: "Username is required." });
+    }
+
+    if (!email || !String(email).includes("@")) {
+      return res.status(400).json({ error: "Valid email is required." });
+    }
+
+    if (!password || String(password).trim().length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long." });
+    }
+
+    const cleanRole: AdminRole =
+      role === "owner" || role === "admin" || role === "editor" ? role : "editor";
+
+    const users = await getAdminUsers();
+
+    if (users.some((u) => u.username === cleanUsername)) {
+      return res.status(400).json({ error: "Username already exists." });
+    }
+
+    if (users.some((u) => u.email.toLowerCase() === String(email).trim().toLowerCase())) {
+      return res.status(400).json({ error: "Email already exists." });
+    }
+
+    const hash = makePasswordHash(String(password).trim());
+
+    const newUser: AdminUser = {
+      username: cleanUsername,
+      displayName: displayName ? String(displayName).trim() : cleanUsername,
+      email: String(email).trim(),
+      role: cleanRole,
+      passwordSalt: hash.passwordSalt,
+      passwordHash: hash.passwordHash,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      lastLogin: "",
+      lastSeenAt: ""
+    };
+
+    users.push(newUser);
+
+    await writeAdminUsersToBlob(users);
+
+    return res.status(201).json({
+      success: true,
+      user: publicAdminUser(newUser)
+    });
+  } catch (error: any) {
+    console.error("Create admin user failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to create admin user."
+    });
+  }
+});
+
+app.put("/api/admin/users/:username", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const targetUsername = normalizeUsername(req.params.username);
+    const { displayName, email, role, isActive } = req.body;
+
+    const users = await getAdminUsers();
+    const userIndex = users.findIndex((u) => u.username === targetUsername);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "Admin user not found." });
+    }
+
+    const currentUser = (req as any).adminUser as AdminUser;
+
+    if (targetUsername === currentUser.username && isActive === false) {
+      return res.status(400).json({ error: "You cannot deactivate your own account." });
+    }
+
+    const cleanRole: AdminRole | undefined =
+      role === "owner" || role === "admin" || role === "editor" ? role : undefined;
+
+    if (targetUsername === currentUser.username && cleanRole && cleanRole !== "owner") {
+      return res.status(400).json({ error: "You cannot remove owner access from your own account." });
+    }
+
+    if (email) {
+      const duplicate = users.find(
+        (u) =>
+          u.email.toLowerCase() === String(email).trim().toLowerCase() &&
+          u.username !== targetUsername
+      );
+
+      if (duplicate) {
+        return res.status(400).json({ error: "This email is already used by another admin account." });
+      }
+    }
+
+    // Prevent removing the last active owner.
+    if (
+      cleanRole &&
+      users[userIndex].role === "owner" &&
+      cleanRole !== "owner"
+    ) {
+      const otherActiveOwners = users.filter(
+        (u) => u.username !== targetUsername && u.role === "owner" && u.isActive
+      );
+
+      if (otherActiveOwners.length === 0) {
+        return res.status(400).json({ error: "At least one active owner account is required." });
+      }
+    }
+
+    if (
+      typeof isActive === "boolean" &&
+      isActive === false &&
+      users[userIndex].role === "owner"
+    ) {
+      const otherActiveOwners = users.filter(
+        (u) => u.username !== targetUsername && u.role === "owner" && u.isActive
+      );
+
+      if (otherActiveOwners.length === 0) {
+        return res.status(400).json({ error: "At least one active owner account is required." });
+      }
+    }
+
+    users[userIndex] = {
+      ...users[userIndex],
+      displayName: displayName !== undefined ? String(displayName).trim() : users[userIndex].displayName,
+      email: email !== undefined ? String(email).trim() : users[userIndex].email,
+      role: cleanRole || users[userIndex].role,
+      isActive: typeof isActive === "boolean" ? isActive : users[userIndex].isActive
+    };
+
+    await writeAdminUsersToBlob(users);
+
+    return res.json({
+      success: true,
+      user: publicAdminUser(users[userIndex])
+    });
+  } catch (error: any) {
+    console.error("Update admin user failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to update admin user."
+    });
+  }
+});
+
+app.put("/api/admin/users/:username/password", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const targetUsername = normalizeUsername(req.params.username);
+    const { newPassword } = req.body;
+
+    if (!newPassword || String(newPassword).trim().length < 4) {
+      return res.status(400).json({ error: "Password must be at least 4 characters long." });
+    }
+
+    const users = await getAdminUsers();
+    const userIndex = users.findIndex((u) => u.username === targetUsername);
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "Admin user not found." });
+    }
+
+    const hash = makePasswordHash(String(newPassword).trim());
+
+    users[userIndex] = {
+      ...users[userIndex],
+      passwordSalt: hash.passwordSalt,
+      passwordHash: hash.passwordHash,
+      resetCode: null
+    };
+
+    await writeAdminUsersToBlob(users);
+
+    return res.json({
+      success: true,
+      message: "Admin user password updated."
+    });
+  } catch (error: any) {
+    console.error("Update admin user password failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to update admin user password."
+    });
+  }
+});
+
+app.delete("/api/admin/users/:username", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const targetUsername = normalizeUsername(req.params.username);
+    const currentUser = (req as any).adminUser as AdminUser;
+
+    if (targetUsername === currentUser.username) {
+      return res.status(400).json({ error: "You cannot delete your own account." });
+    }
+
+    const users = await getAdminUsers();
+    const targetUser = users.find((u) => u.username === targetUsername);
+
+    if (!targetUser) {
+      return res.status(404).json({ error: "Admin user not found." });
+    }
+
+    if (targetUser.role === "owner") {
+      const otherActiveOwners = users.filter(
+        (u) => u.username !== targetUsername && u.role === "owner" && u.isActive
+      );
+
+      if (otherActiveOwners.length === 0) {
+        return res.status(400).json({ error: "At least one active owner account is required." });
+      }
+    }
+
+    const updatedUsers = users.filter((u) => u.username !== targetUsername);
+
+    await writeAdminUsersToBlob(updatedUsers);
+
+    return res.json({
+      success: true,
+      message: "Admin user deleted."
+    });
+  } catch (error: any) {
+    console.error("Delete admin user failed:", error);
+
+    return res.status(500).json({
+      error: error?.message || "Failed to delete admin user."
+    });
+  }
+});
+
+
 
 // Update text copy sections
 // Update text copy sections

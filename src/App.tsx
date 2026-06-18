@@ -814,6 +814,32 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
   const [loginError, setLoginError] = useState<string>("");
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
+  type AdminPanelUser = {
+    username: string;
+    displayName: string;
+    email: string;
+    role: "owner" | "admin" | "editor";
+    isActive: boolean;
+    createdAt: string;
+    lastLogin?: string;
+    lastSeenAt?: string;
+    isOnline?: boolean;
+  };
+
+  const [currentAdminUser, setCurrentAdminUser] = useState<AdminPanelUser | null>(null);
+  const [adminUsers, setAdminUsers] = useState<AdminPanelUser[]>([]);
+  const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState<boolean>(false);
+  const [isCreatingAdminUser, setIsCreatingAdminUser] = useState<boolean>(false);
+  const [adminUsersError, setAdminUsersError] = useState<string>("");
+  const [newAdminUserForm, setNewAdminUserForm] = useState({
+    username: "",
+    displayName: "",
+    email: "",
+    password: "",
+    role: "editor" as "owner" | "admin" | "editor"
+  });
+
+
   // Forgot password/Reset states
   const [showForgotPassword, setShowForgotPassword] = useState<boolean>(false);
   const [resetEmail, setResetEmail] = useState<string>("biotechagro.digital@gmail.com");
@@ -937,21 +963,45 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
   // ==========================================
   // EFFECT: Verify Token & Get Inbox Messages
   // ==========================================
+  const getFallbackAdminUser = (username = "admin"): AdminPanelUser => ({
+    username,
+    displayName: username === "admin" ? "Main Admin" : username,
+    email: adminSecEmail || "biotechagro.digital@gmail.com",
+    role: username === "admin" ? "owner" : "admin",
+    isActive: true,
+    createdAt: "",
+    lastLogin: "",
+    lastSeenAt: "",
+    isOnline: true
+  });
+
   const verifyTokenAndLoadInbox = async (token: string) => {
     if (!token) return;
+
     try {
       const response = await fetch("/api/auth/verify", {
         headers: { Authorization: `Bearer ${token}` }
       });
+
       if (response.ok) {
+        const data = await response.json();
+        const user: AdminPanelUser = data.user || getFallbackAdminUser(data.username || "admin");
+
         setIsAdminLoggedIn(true);
+        setCurrentAdminUser(user);
+
         loadAdminInbox(token);
         loadAdminSettings(token);
+
+        if (user.role === "owner") {
+          loadAdminUsers(token);
+        }
       } else {
-        // stale token
         localStorage.removeItem("myco_admin_token");
         setAuthToken("");
         setIsAdminLoggedIn(false);
+        setCurrentAdminUser(null);
+        setAdminUsers([]);
       }
     } catch (err) {
       console.error("Token verification failed:", err);
@@ -989,11 +1039,185 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
     }
   };
 
+
+  const loadAdminUsers = async (token = authToken) => {
+    if (!token) return;
+
+    try {
+      setIsLoadingAdminUsers(true);
+      setAdminUsersError("");
+
+      const response = await fetch("/api/admin/users", {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAdminUsersError(data.error || "Failed to load admin users.");
+        return;
+      }
+
+      setAdminUsers(data.users || []);
+    } catch (error) {
+      console.error("Load admin users failed:", error);
+      setAdminUsersError("Network error while loading admin users.");
+    } finally {
+      setIsLoadingAdminUsers(false);
+    }
+  };
+
+  const handleCreateAdminUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      setIsCreatingAdminUser(true);
+      setAdminUsersError("");
+
+      const response = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(newAdminUserForm)
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAdminUsersError(data.error || "Failed to create admin user.");
+        return;
+      }
+
+      setNewAdminUserForm({
+        username: "",
+        displayName: "",
+        email: "",
+        password: "",
+        role: "editor"
+      });
+
+      loadAdminUsers();
+    } catch (error) {
+      console.error("Create admin user failed:", error);
+      setAdminUsersError("Network error while creating admin user.");
+    } finally {
+      setIsCreatingAdminUser(false);
+    }
+  };
+
+  const handleUpdateAdminUser = async (username: string, updates: Partial<AdminPanelUser>) => {
+    try {
+      setAdminUsersError("");
+
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify(updates)
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAdminUsersError(data.error || "Failed to update admin user.");
+        return;
+      }
+
+      loadAdminUsers();
+    } catch (error) {
+      console.error("Update admin user failed:", error);
+      setAdminUsersError("Network error while updating admin user.");
+    }
+  };
+
+  const handleToggleAdminUserStatus = async (user: AdminPanelUser) => {
+    if (user.username === currentAdminUser?.username) {
+      alert("You cannot deactivate your own account.");
+      return;
+    }
+
+    await handleUpdateAdminUser(user.username, { isActive: !user.isActive });
+  };
+
+  const handleDeleteAdminUser = async (user: AdminPanelUser) => {
+    if (user.username === currentAdminUser?.username) {
+      alert("You cannot delete your own account.");
+      return;
+    }
+
+    if (!confirm(`Delete admin user "${user.username}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setAdminUsersError("");
+
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(user.username)}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAdminUsersError(data.error || "Failed to delete admin user.");
+        return;
+      }
+
+      loadAdminUsers();
+    } catch (error) {
+      console.error("Delete admin user failed:", error);
+      setAdminUsersError("Network error while deleting admin user.");
+    }
+  };
+
   useEffect(() => {
     if (authToken) {
       verifyTokenAndLoadInbox(authToken);
     }
   }, [authToken]);
+
+  useEffect(() => {
+    if (!isAdminLoggedIn || !authToken) return;
+
+    const ping = async () => {
+      try {
+        const response = await fetch("/api/auth/ping", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data.user) {
+          setCurrentAdminUser(data.user);
+
+          if (data.user.role === "owner") {
+            loadAdminUsers();
+          }
+        }
+      } catch (error) {
+        console.warn("Admin heartbeat failed:", error);
+      }
+    };
+
+    ping();
+
+    const timer = window.setInterval(ping, 60 * 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isAdminLoggedIn, authToken, currentAdminUser?.role]);
+
 
   // ==========================================
   // USER: Submit contact inquiry
@@ -1050,13 +1274,20 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
       });
       const data = await response.json();
       if (response.ok && data.token) {
+        const user: AdminPanelUser = data.user || getFallbackAdminUser(data.username || "admin");
+
         localStorage.setItem("myco_admin_token", data.token);
         setAuthToken(data.token);
         setIsAdminLoggedIn(true);
+        setCurrentAdminUser(user);
         setAdminPassword("");
         setAdminUsername("");
         loadAdminInbox(data.token);
         loadAdminSettings(data.token);
+
+        if (user.role === "owner") {
+          loadAdminUsers(data.token);
+        }
       } else {
         setLoginError(data.error || "Invalid username or password.");
       }
@@ -1071,6 +1302,9 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
     localStorage.removeItem("myco_admin_token");
     setAuthToken("");
     setIsAdminLoggedIn(false);
+    setCurrentAdminUser(null);
+    setAdminUsers([]);
+    setAdminUsersError("");
     setAdminMessages([]);
     if (activePage === "admin") {
       setActivePage("home");
@@ -1946,6 +2180,224 @@ const handleUploadHeroBackground = async (file: File) => {
       window.open(`https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${encodeURIComponent(`${window.location.origin}/?qr=${productId}`)}`, '_blank');
     }
   };
+
+
+  const renderAdminUsersPanel = () => {
+    if (!isAdminLoggedIn || currentAdminUser?.role !== "owner") {
+      return null;
+    }
+
+    return (
+      <section className="bg-white border border-stone-200 rounded-3xl p-6 shadow-sm space-y-6">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+          <div>
+            <h2 className="font-display text-xl font-bold text-stone-900">
+              Admin Users
+            </h2>
+            <p className="text-xs text-stone-500 mt-1">
+              Create staff accounts, control access, and monitor who is currently connected.
+            </p>
+            <p className="text-[11px] text-stone-500 mt-2">
+              Signed in as <span className="font-bold text-stone-900">@{currentAdminUser.username}</span>
+              {" "}· Role: <span className="font-bold text-emerald-700 uppercase">{currentAdminUser.role}</span>
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => loadAdminUsers()}
+            className="px-4 py-2 rounded-xl bg-stone-900 text-white text-xs font-bold hover:bg-stone-800"
+          >
+            Refresh Users
+          </button>
+        </div>
+
+        {adminUsersError && (
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+            {adminUsersError}
+          </div>
+        )}
+
+        <form onSubmit={handleCreateAdminUser} className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-stone-50 border border-stone-200 rounded-2xl p-4">
+          <input
+            type="text"
+            required
+            value={newAdminUserForm.username}
+            onChange={(e) => setNewAdminUserForm({ ...newAdminUserForm, username: e.target.value })}
+            placeholder="Username"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-xs"
+          />
+
+          <input
+            type="text"
+            value={newAdminUserForm.displayName}
+            onChange={(e) => setNewAdminUserForm({ ...newAdminUserForm, displayName: e.target.value })}
+            placeholder="Display name"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-xs"
+          />
+
+          <input
+            type="email"
+            required
+            value={newAdminUserForm.email}
+            onChange={(e) => setNewAdminUserForm({ ...newAdminUserForm, email: e.target.value })}
+            placeholder="Email"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-xs"
+          />
+
+          <input
+            type="password"
+            required
+            value={newAdminUserForm.password}
+            onChange={(e) => setNewAdminUserForm({ ...newAdminUserForm, password: e.target.value })}
+            placeholder="Temporary password"
+            className="rounded-xl border border-stone-200 px-3 py-2 text-xs"
+          />
+
+          <div className="flex gap-2">
+            <select
+              value={newAdminUserForm.role}
+              onChange={(e) =>
+                setNewAdminUserForm({
+                  ...newAdminUserForm,
+                  role: e.target.value as "owner" | "admin" | "editor"
+                })
+              }
+              className="rounded-xl border border-stone-200 px-3 py-2 text-xs flex-1"
+            >
+              <option value="editor">Editor</option>
+              <option value="admin">Admin</option>
+              <option value="owner">Owner</option>
+            </select>
+
+            <button
+              type="submit"
+              disabled={isCreatingAdminUser}
+              className="rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold px-4 disabled:opacity-50"
+            >
+              {isCreatingAdminUser ? "Adding..." : "Add"}
+            </button>
+          </div>
+        </form>
+
+        <div className="overflow-x-auto border border-stone-200 rounded-2xl">
+          <table className="w-full text-xs">
+            <thead className="bg-stone-50 text-stone-500">
+              <tr>
+                <th className="text-left px-4 py-3 font-bold">Status</th>
+                <th className="text-left px-4 py-3 font-bold">User</th>
+                <th className="text-left px-4 py-3 font-bold">Role</th>
+                <th className="text-left px-4 py-3 font-bold">Email</th>
+                <th className="text-left px-4 py-3 font-bold">Last Login</th>
+                <th className="text-left px-4 py-3 font-bold">Last Online</th>
+                <th className="text-right px-4 py-3 font-bold">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {isLoadingAdminUsers ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-stone-400">
+                    Loading admin users...
+                  </td>
+                </tr>
+              ) : adminUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-8 text-center text-stone-400">
+                    No admin users found.
+                  </td>
+                </tr>
+              ) : (
+                adminUsers.map((user) => (
+                  <tr key={user.username} className="border-t border-stone-100">
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-bold ${
+                          user.isOnline
+                            ? "bg-emerald-50 text-emerald-700"
+                            : "bg-stone-100 text-stone-500"
+                        }`}
+                      >
+                        <span
+                          className={`w-2 h-2 rounded-full ${
+                            user.isOnline ? "bg-emerald-500" : "bg-stone-400"
+                          }`}
+                        />
+                        {user.isOnline ? "Connected" : "Offline"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="font-bold text-stone-900">{user.displayName || user.username}</div>
+                      <div className="text-[10px] text-stone-400">@{user.username}</div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <select
+                        value={user.role}
+                        disabled={user.username === currentAdminUser.username}
+                        onChange={(e) =>
+                          handleUpdateAdminUser(user.username, {
+                            role: e.target.value as "owner" | "admin" | "editor"
+                          })
+                        }
+                        className="rounded-lg bg-stone-100 px-2 py-1 font-bold text-stone-600 uppercase disabled:opacity-60"
+                      >
+                        <option value="editor">EDITOR</option>
+                        <option value="admin">ADMIN</option>
+                        <option value="owner">OWNER</option>
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3 text-stone-600">{user.email}</td>
+
+                    <td className="px-4 py-3 text-stone-500">
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleString() : "Never"}
+                    </td>
+
+                    <td className="px-4 py-3 text-stone-500">
+                      {user.lastSeenAt ? new Date(user.lastSeenAt).toLocaleString() : "Never"}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          disabled={user.username === currentAdminUser.username}
+                          onClick={() => handleToggleAdminUserStatus(user)}
+                          className={`rounded-xl px-3 py-2 text-[11px] font-bold ${
+                            user.isActive
+                              ? "bg-rose-50 text-rose-700 hover:bg-rose-100"
+                              : "bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          } disabled:opacity-40 disabled:cursor-not-allowed`}
+                        >
+                          {user.isActive ? "Deactivate" : "Activate"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={user.username === currentAdminUser.username}
+                          onClick={() => handleDeleteAdminUser(user)}
+                          className="rounded-xl px-3 py-2 text-[11px] font-bold bg-stone-100 text-stone-600 hover:bg-stone-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="text-[10px] text-stone-400">
+          Online status means the user pinged the server during the last 2 minutes while their admin console was open.
+        </p>
+      </section>
+    );
+  };
+
 
   return (
     <div className="min-h-screen bg-[#fcfcf9] flex flex-col selection:bg-emerald-100 selection:text-emerald-900 print:bg-white print:p-0">
@@ -4987,6 +5439,8 @@ const handleUploadHeroBackground = async (file: File) => {
                     </span>
                   </div>
                 </div>
+
+                {renderAdminUsersPanel()}
 
                 {/* MAIN GRID: Content management area */}
                 <div className="w-full space-y-12">

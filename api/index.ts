@@ -24,7 +24,7 @@ const ADMIN_ACTION_LOG_USER_FOLDER = "data/admin-action-logs/users";
 const MAX_ADMIN_ACTION_LOG_ITEMS = 1000;
 
 let publicDataCache: any | null = null;
-let adminUsersCache: AdminUser[] | null = null;
+//let adminUsersCache: AdminUser[] | null = null;
 
 
 
@@ -469,10 +469,6 @@ function isBlobNotFoundError(error: any) {
 
 async function readAdminUsersFromBlob(): Promise<AdminUsersReadResult> {
   try {
-    if (adminUsersCache) {
-      return { users: adminUsersCache, notFound: false };
-    }
-
     const result = await get(ADMIN_USERS_BLOB_PATH, { access: "public" });
 
     if (!result || result.statusCode === 404 || !result.stream) {
@@ -498,17 +494,13 @@ async function readAdminUsersFromBlob(): Promise<AdminUsersReadResult> {
       };
     }
 
-    adminUsersCache = parsed;
     return { users: parsed, notFound: false };
   } catch (error: any) {
     if (isBlobNotFoundError(error)) {
-      // Normal only on the first deployment before data/admin-users.json exists.
       console.warn("Admin users Blob not found yet. It will be seeded once.", error?.message || error);
       return { users: null, notFound: true, error };
     }
 
-    // Important: do NOT seed/overwrite the admin users JSON when Blob read fails.
-    // This prevents created users from disappearing after a cold start or temporary Blob error.
     console.error("Failed to read persistent admin users JSON from Vercel Blob:", error?.message || error);
     return { users: null, notFound: false, error };
   }
@@ -671,8 +663,6 @@ async function writeAdminUsersToBlob(
   users: AdminUser[],
   options: { allowOverwrite?: boolean } = {}
 ) {
-  adminUsersCache = users;
-
   await put(ADMIN_USERS_BLOB_PATH, JSON.stringify(users, null, 2), {
     access: "public",
     contentType: "application/json",
@@ -739,8 +729,7 @@ async function getAdminUsers(seedDb?: any): Promise<AdminUser[]> {
   try {
     await writeAdminUsersToBlob(seedUsers, { allowOverwrite: false });
   } catch (error: any) {
-    adminUsersCache = null;
-    throw new Error(
+        throw new Error(
       "Admin users JSON could not be seeded without overwrite. Existing users were preserved. Please check Vercel Blob data/admin-users.json and redeploy."
     );
   }

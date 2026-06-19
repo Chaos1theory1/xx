@@ -568,7 +568,7 @@ async function createAdminUserLogFile(
     }
   };
 
-  await put(userLogPath, JSON.stringify([firstEntry], null, 2), {
+  const blob = await put(userLogPath, JSON.stringify([firstEntry], null, 2), {
     access: "public",
     contentType: "application/json",
     addRandomSuffix: false,
@@ -576,9 +576,18 @@ async function createAdminUserLogFile(
     cacheControlMaxAge: 0
   });
 
-  return userLogPath;
-}
+  console.log("Admin user log file created:", {
+    username: newUser.username,
+    pathname: blob.pathname,
+    url: blob.url
+  });
 
+  return {
+    path: userLogPath,
+    pathname: blob.pathname,
+    url: blob.url
+  };
+}
 
 
 
@@ -1378,20 +1387,25 @@ app.post("/api/admin/users", requireAdmin, requireOwner, async (req, res) => {
       lastSeenAt: ""
     };
 
-    users.push(newUser);
+users.push(newUser);
 
-    await writeAdminUsersToBlob(users);
+await writeAdminUsersToBlob(users);
 
-    const currentUser = (req as any).adminUser as AdminUser | undefined;
+const currentUser = (req as any).adminUser as AdminUser | undefined;
 
-const userLogPath = await createAdminUserLogFile(newUser, currentUser);
+let userLogFile: any = null;
 
+try {
+  userLogFile = await createAdminUserLogFile(newUser, currentUser);
+} catch (logError: any) {
+  console.error("User was created, but log file creation failed:", logError?.message || logError);
+}
 
-    return res.status(201).json({
-      success: true,
-      user: publicAdminUser(newUser),
-      userLogPath
-    });
+return res.status(201).json({
+  success: true,
+  user: publicAdminUser(newUser),
+  userLogFile
+});
   } catch (error: any) {
     console.error("Create admin user failed:", error);
 
@@ -1573,7 +1587,36 @@ app.delete("/api/admin/users/:username", requireAdmin, requireOwner, async (req,
   }
 });
 
+app.get("/api/admin/users/:username/log", requireAdmin, requireOwner, async (req, res) => {
+  try {
+    const username = safeLogUsername(req.params.username);
+    const userLogPath = `${ADMIN_ACTION_LOG_USER_FOLDER}/${username}.json`;
 
+    const result = await get(userLogPath, { access: "public" });
+
+    if (!result || result.statusCode !== 200 || !result.stream) {
+      return res.status(404).json({
+        success: false,
+        error: "User log file not found.",
+        path: userLogPath
+      });
+    }
+
+    const text = await new Response(result.stream).text();
+    const logs = JSON.parse(text);
+
+    return res.json({
+      success: true,
+      path: userLogPath,
+      logs
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      error: error?.message || "Failed to read user log file."
+    });
+  }
+});
 
 // Update text copy sections
 // Update text copy sections

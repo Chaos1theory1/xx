@@ -20,9 +20,17 @@ const WRITABLE_DB_PATH = process.env.VERCEL ? "/tmp/biotechagro-db.json" : SOURC
 const PUBLIC_DATA_BLOB_PATH = "data/public-content.json";
 const ADMIN_USERS_BLOB_PATH = "data/admin-users.json";
 const SESSION_SECRET = process.env.SESSION_SECRET || "mycotunisia_secret_session_2026";
+const ADMIN_ACTION_LOG_USER_FOLDER = "data/admin-action-logs/users";
+const MAX_ADMIN_ACTION_LOG_ITEMS = 1000;
 
 let publicDataCache: any | null = null;
 let adminUsersCache: AdminUser[] | null = null;
+
+
+
+
+
+
 
 function ensureWritableDB() {
   try {
@@ -506,6 +514,74 @@ async function readAdminUsersFromBlob(): Promise<AdminUsersReadResult> {
   }
 }
 
+
+type AdminActionLogEntry = {
+  id: string;
+  timestamp: string;
+  actor: {
+    username: string;
+    displayName?: string;
+    email?: string;
+    role?: string;
+  };
+  action: string;
+  resourceType: string;
+  resourceId?: string;
+  resourceLabel?: string;
+  details?: any;
+};
+
+function safeLogUsername(username: string) {
+  return String(username || "unknown")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "") || "unknown";
+}
+
+async function createAdminUserLogFile(
+  newUser: AdminUser,
+  createdBy?: AdminUser
+) {
+  const usernameForPath = safeLogUsername(newUser.username);
+  const userLogPath = `${ADMIN_ACTION_LOG_USER_FOLDER}/${usernameForPath}.json`;
+
+  const firstEntry: AdminActionLogEntry = {
+    id: `log_${Date.now()}_${crypto.randomUUID()}`,
+    timestamp: new Date().toISOString(),
+    actor: {
+      username: createdBy?.username || "system",
+      displayName: createdBy?.displayName || "System",
+      email: createdBy?.email || "",
+      role: createdBy?.role || "system"
+    },
+    action: "USER_ACCOUNT_CREATED",
+    resourceType: "admin_user",
+    resourceId: newUser.username,
+    resourceLabel: `${newUser.displayName} (${newUser.role})`,
+    details: {
+      createdUsername: newUser.username,
+      createdEmail: newUser.email,
+      createdRole: newUser.role,
+      logFileCreated: userLogPath
+    }
+  };
+
+  await put(userLogPath, JSON.stringify([firstEntry], null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0
+  });
+
+  return userLogPath;
+}
+
+
+
+
 async function writeAdminUsersToBlob(
   users: AdminUser[],
   options: { allowOverwrite?: boolean } = {}
@@ -522,6 +598,9 @@ async function writeAdminUsersToBlob(
 
   return users;
 }
+
+
+
 
 async function getAdminUsers(seedDb?: any): Promise<AdminUser[]> {
   const readResult = await readAdminUsersFromBlob();
@@ -1303,9 +1382,15 @@ app.post("/api/admin/users", requireAdmin, requireOwner, async (req, res) => {
 
     await writeAdminUsersToBlob(users);
 
+    const currentUser = (req as any).adminUser as AdminUser | undefined;
+
+const userLogPath = await createAdminUserLogFile(newUser, currentUser);
+
+
     return res.status(201).json({
       success: true,
       user: publicAdminUser(newUser)
+      userLogPath
     });
   } catch (error: any) {
     console.error("Create admin user failed:", error);

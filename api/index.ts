@@ -441,42 +441,82 @@ function publicAdminUser(user: AdminUser) {
   };
 }
 
-async function readAdminUsersFromBlob(): Promise<AdminUser[] | null> {
+type AdminUsersReadResult = {
+  users: AdminUser[] | null;
+  notFound: boolean;
+  error?: any;
+};
+
+function isBlobNotFoundError(error: any) {
+  const message = String(error?.message || error || "").toLowerCase();
+
+  return (
+    message.includes("404") ||
+    message.includes("not found") ||
+    message.includes("no such") ||
+    message.includes("does not exist") ||
+    message.includes("could not be found")
+  );
+}
+
+async function readAdminUsersFromBlob(): Promise<AdminUsersReadResult> {
   try {
     if (adminUsersCache) {
-      return adminUsersCache;
+      return { users: adminUsersCache, notFound: false };
     }
 
     const result = await get(ADMIN_USERS_BLOB_PATH, { access: "public" });
 
-    if (!result || result.statusCode !== 200 || !result.stream) {
-      return null;
+    if (!result || result.statusCode === 404 || !result.stream) {
+      return { users: null, notFound: true };
+    }
+
+    if (result.statusCode !== 200) {
+      return {
+        users: null,
+        notFound: result.statusCode === 404,
+        error: new Error(`Unexpected Blob status while reading admin users: ${result.statusCode}`)
+      };
     }
 
     const text = await new Response(result.stream).text();
     const parsed = JSON.parse(text);
 
     if (!Array.isArray(parsed)) {
-      return null;
+      return {
+        users: null,
+        notFound: false,
+        error: new Error("Admin users JSON exists but is not an array.")
+      };
     }
 
     adminUsersCache = parsed;
-    return parsed;
+    return { users: parsed, notFound: false };
   } catch (error: any) {
-    // Normal on the first deployment before data/admin-users.json exists.
-    console.warn("Admin users Blob not found yet. Seeding from existing admin settings.", error?.message || error);
-    return null;
+    if (isBlobNotFoundError(error)) {
+      // Normal only on the first deployment before data/admin-users.json exists.
+      console.warn("Admin users Blob not found yet. It will be seeded once.", error?.message || error);
+      return { users: null, notFound: true, error };
+    }
+
+    // Important: do NOT seed/overwrite the admin users JSON when Blob read fails.
+    // This prevents created users from disappearing after a cold start or temporary Blob error.
+    console.error("Failed to read persistent admin users JSON from Vercel Blob:", error?.message || error);
+    return { users: null, notFound: false, error };
   }
 }
 
-async function writeAdminUsersToBlob(users: AdminUser[]) {
+async function writeAdminUsersToBlob(
+  users: AdminUser[],
+  options: { allowOverwrite?: boolean } = {}
+) {
   adminUsersCache = users;
 
   await put(ADMIN_USERS_BLOB_PATH, JSON.stringify(users, null, 2), {
     access: "public",
     contentType: "application/json",
     addRandomSuffix: false,
-    allowOverwrite: true,
+    allowOverwrite: options.allowOverwrite ?? true,
     cacheControlMaxAge: 0
   });
 
@@ -484,10 +524,20 @@ async function writeAdminUsersToBlob(users: AdminUser[]) {
 }
 
 async function getAdminUsers(seedDb?: any): Promise<AdminUser[]> {
-  const blobUsers = await readAdminUsersFromBlob();
+  const readResult = await readAdminUsersFromBlob();
 
-  if (blobUsers && blobUsers.length > 0) {
-    return blobUsers;
+  if (readResult.users && readResult.users.length > 0) {
+    return readResult.users;
+  }
+
+  if (readResult.users && readResult.users.length === 0) {
+    return readResult.users;
+  }
+
+  if (readResult.error && !readResult.notFound) {
+    throw new Error(
+      "Could not read persistent admin users JSON from Vercel Blob. Existing users were not overwritten. Check BLOB_READ_WRITE_TOKEN and Vercel Blob access."
+    );
   }
 
   const db = seedDb || readLocalDBState() || {};
@@ -521,7 +571,15 @@ async function getAdminUsers(seedDb?: any): Promise<AdminUser[]> {
     }
   ];
 
-  await writeAdminUsersToBlob(seedUsers);
+  // Seed only if the Blob was really not found. Never overwrite an existing admin-users.json during seed.
+  try {
+    await writeAdminUsersToBlob(seedUsers, { allowOverwrite: false });
+  } catch (error: any) {
+    adminUsersCache = null;
+    throw new Error(
+      "Admin users JSON could not be seeded without overwrite. Existing users were preserved. Please check Vercel Blob data/admin-users.json and redeploy."
+    );
+  }
 
   return seedUsers;
 }

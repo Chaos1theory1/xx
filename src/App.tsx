@@ -831,6 +831,10 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
   const [isLoadingAdminUsers, setIsLoadingAdminUsers] = useState<boolean>(false);
   const [isCreatingAdminUser, setIsCreatingAdminUser] = useState<boolean>(false);
   const [adminUsersError, setAdminUsersError] = useState<string>("");
+  const [adminUsersNotice, setAdminUsersNotice] = useState<string>("");
+  const [passwordResetTargetUser, setPasswordResetTargetUser] = useState<string | null>(null);
+  const [adminUserPasswordResetValue, setAdminUserPasswordResetValue] = useState<string>("");
+  const [isResettingAdminUserPassword, setIsResettingAdminUserPassword] = useState<boolean>(false);
   const [newAdminUserForm, setNewAdminUserForm] = useState({
     username: "",
     displayName: "",
@@ -1075,6 +1079,7 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
     try {
       setIsCreatingAdminUser(true);
       setAdminUsersError("");
+      setAdminUsersNotice("");
 
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -1100,6 +1105,7 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
         role: "editor"
       });
 
+      setAdminUsersNotice(`User @${data.user?.username || newAdminUserForm.username} was created and saved to persistent Vercel Blob JSON.`);
       loadAdminUsers();
     } catch (error) {
       console.error("Create admin user failed:", error);
@@ -1112,6 +1118,7 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
   const handleUpdateAdminUser = async (username: string, updates: Partial<AdminPanelUser>) => {
     try {
       setAdminUsersError("");
+      setAdminUsersNotice("");
 
       const response = await fetch(`/api/admin/users/${encodeURIComponent(username)}`, {
         method: "PUT",
@@ -1129,6 +1136,7 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
         return;
       }
 
+      setAdminUsersNotice(`User @${username} was updated.`);
       loadAdminUsers();
     } catch (error) {
       console.error("Update admin user failed:", error);
@@ -1157,6 +1165,7 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
 
     try {
       setAdminUsersError("");
+      setAdminUsersNotice("");
 
       const response = await fetch(`/api/admin/users/${encodeURIComponent(user.username)}`, {
         method: "DELETE",
@@ -1172,10 +1181,67 @@ const [heroBgUrlInput, setHeroBgUrlInput] = useState("");
         return;
       }
 
+      setAdminUsersNotice(`User @${user.username} was deleted from persistent Vercel Blob JSON.`);
       loadAdminUsers();
     } catch (error) {
       console.error("Delete admin user failed:", error);
       setAdminUsersError("Network error while deleting admin user.");
+    }
+  };
+
+
+  const openAdminUserPasswordReset = (user: AdminPanelUser) => {
+    if (user.username === currentAdminUser?.username) {
+      alert("Use the Security section to change your own password.");
+      return;
+    }
+
+    setPasswordResetTargetUser(user.username);
+    setAdminUserPasswordResetValue("");
+    setAdminUsersError("");
+    setAdminUsersNotice("");
+  };
+
+  const handleResetAdminUserPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!passwordResetTargetUser) return;
+
+    if (adminUserPasswordResetValue.trim().length < 4) {
+      setAdminUsersError("Password must be at least 4 characters long.");
+      return;
+    }
+
+    try {
+      setIsResettingAdminUserPassword(true);
+      setAdminUsersError("");
+      setAdminUsersNotice("");
+
+      const response = await fetch(`/api/admin/users/${encodeURIComponent(passwordResetTargetUser)}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`
+        },
+        body: JSON.stringify({ newPassword: adminUserPasswordResetValue.trim() })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setAdminUsersError(data.error || "Failed to reset admin user password.");
+        return;
+      }
+
+      setAdminUsersNotice(`Password for @${passwordResetTargetUser} was reset successfully.`);
+      setPasswordResetTargetUser(null);
+      setAdminUserPasswordResetValue("");
+      loadAdminUsers();
+    } catch (error) {
+      console.error("Reset admin user password failed:", error);
+      setAdminUsersError("Network error while resetting admin user password.");
+    } finally {
+      setIsResettingAdminUserPassword(false);
     }
   };
 
@@ -2218,6 +2284,12 @@ const handleUploadHeroBackground = async (file: File) => {
           </div>
         )}
 
+        {adminUsersNotice && (
+          <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs">
+            {adminUsersNotice}
+          </div>
+        )}
+
         <form onSubmit={handleCreateAdminUser} className="grid grid-cols-1 md:grid-cols-5 gap-3 bg-stone-50 border border-stone-200 rounded-2xl p-4">
           <input
             type="text"
@@ -2279,6 +2351,53 @@ const handleUploadHeroBackground = async (file: File) => {
             </button>
           </div>
         </form>
+
+        {passwordResetTargetUser && (
+          <form
+            onSubmit={handleResetAdminUserPassword}
+            className="flex flex-col md:flex-row md:items-center gap-3 bg-amber-50 border border-amber-200 rounded-2xl p-4"
+          >
+            <div className="flex-1">
+              <p className="text-xs font-bold text-amber-900">
+                Reset password for @{passwordResetTargetUser}
+              </p>
+              <p className="text-[10px] text-amber-700 mt-0.5">
+                The owner can set a new temporary password for this user. The user can change it after login.
+              </p>
+            </div>
+
+            <input
+              type="password"
+              required
+              minLength={4}
+              value={adminUserPasswordResetValue}
+              onChange={(e) => setAdminUserPasswordResetValue(e.target.value)}
+              placeholder="New temporary password"
+              className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-xs md:w-64"
+            />
+
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={isResettingAdminUserPassword}
+                className="rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold px-4 py-2 disabled:opacity-50"
+              >
+                {isResettingAdminUserPassword ? "Saving..." : "Reset Password"}
+              </button>
+              <button
+                type="button"
+                disabled={isResettingAdminUserPassword}
+                onClick={() => {
+                  setPasswordResetTargetUser(null);
+                  setAdminUserPasswordResetValue("");
+                }}
+                className="rounded-xl bg-white border border-amber-200 text-amber-800 text-xs font-bold px-4 py-2 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        )}
 
         <div className="overflow-x-auto border border-stone-200 rounded-2xl">
           <table className="w-full text-xs">
@@ -2372,6 +2491,15 @@ const handleUploadHeroBackground = async (file: File) => {
                           } disabled:opacity-40 disabled:cursor-not-allowed`}
                         >
                           {user.isActive ? "Deactivate" : "Activate"}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={user.username === currentAdminUser.username}
+                          onClick={() => openAdminUserPasswordReset(user)}
+                          className="rounded-xl px-3 py-2 text-[11px] font-bold bg-amber-50 text-amber-700 hover:bg-amber-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          Reset Password
                         </button>
 
                         <button

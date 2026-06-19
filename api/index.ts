@@ -589,6 +589,82 @@ async function createAdminUserLogFile(
   };
 }
 
+async function readAdminUserLogFile(username: string): Promise<AdminActionLogEntry[]> {
+  try {
+    const usernameForPath = safeLogUsername(username);
+    const userLogPath = `${ADMIN_ACTION_LOG_USER_FOLDER}/${usernameForPath}.json`;
+
+    const result = await get(userLogPath, { access: "public" });
+
+    if (!result || result.statusCode !== 200 || !result.stream) {
+      return [];
+    }
+
+    const text = await new Response(result.stream).text();
+    const parsed = JSON.parse(text);
+
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+async function appendCurrentAdminActionLog(
+  req: express.Request,
+  log: {
+    action: string;
+    resourceType: string;
+    resourceId?: string;
+    resourceLabel?: string;
+    details?: any;
+  }
+) {
+  const currentUser = (req as any).adminUser as AdminUser | undefined;
+
+  if (!currentUser) {
+    console.warn("Action log skipped: no admin user attached to request.");
+    return null;
+  }
+
+  const usernameForPath = safeLogUsername(currentUser.username);
+  const userLogPath = `${ADMIN_ACTION_LOG_USER_FOLDER}/${usernameForPath}.json`;
+
+  const previousLogs = await readAdminUserLogFile(currentUser.username);
+
+  const newEntry: AdminActionLogEntry = {
+    id: `log_${Date.now()}_${crypto.randomUUID()}`,
+    timestamp: new Date().toISOString(),
+    actor: {
+      username: currentUser.username,
+      displayName: currentUser.displayName,
+      email: currentUser.email,
+      role: currentUser.role
+    },
+    action: log.action,
+    resourceType: log.resourceType,
+    resourceId: log.resourceId || "",
+    resourceLabel: log.resourceLabel || "",
+    details: log.details || {}
+  };
+
+  const updatedLogs = [newEntry, ...previousLogs].slice(0, MAX_ADMIN_ACTION_LOG_ITEMS);
+
+  const blob = await put(userLogPath, JSON.stringify(updatedLogs, null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+    cacheControlMaxAge: 0
+  });
+
+  return {
+    path: userLogPath,
+    url: blob.url,
+    entry: newEntry
+  };
+}
+
+
 
 
 async function writeAdminUsersToBlob(
@@ -1679,7 +1755,19 @@ app.put("/api/content/text", requireAdmin, async (req, res) => {
   }
 
   await saveDBState(db);
-  res.json({ success: true, content: db.siteContent });
+
+await appendCurrentAdminActionLog(req, {
+  action: "UPDATE_CONTENT_SECTION",
+  resourceType: "site_content",
+  resourceId: section,
+  resourceLabel: section,
+  details: {
+    section,
+    changedKeys: typeof data === "object" && data !== null ? Object.keys(data) : []
+  }
+});
+
+res.json({ success: true, content: db.siteContent });
 });
 
 // Add a product catalog item
@@ -1704,10 +1792,22 @@ app.post("/api/products", requireAdmin, async (req, res) => {
   };
 
   db.products = db.products || [];
-  db.products.push(newProduct);
-  await saveDBState(db);
+db.products.push(newProduct);
+await saveDBState(db);
 
-  res.status(201).json({ success: true, product: newProduct });
+await appendCurrentAdminActionLog(req, {
+  action: "CREATE_PRODUCT",
+  resourceType: "product",
+  resourceId: newProduct.id,
+  resourceLabel: newProduct.name,
+  details: {
+    name: newProduct.name,
+    category: newProduct.category,
+    status: newProduct.status
+  }
+});
+
+res.status(201).json({ success: true, product: newProduct });
 });
 
 // Update a product catalog item
@@ -1730,13 +1830,26 @@ app.put("/api/products/:id", requireAdmin, async (req, res) => {
   };
 
   await saveDBState(db);
-  res.json({ success: true, product: db.products[index] });
+
+await appendCurrentAdminActionLog(req, {
+  action: "UPDATE_PRODUCT",
+  resourceType: "product",
+  resourceId: id,
+  resourceLabel: db.products[index].name,
+  details: {
+    productId: id,
+    changedKeys: Object.keys(updateData || {})
+  }
+});
+
+res.json({ success: true, product: db.products[index] });
 });
 
 // Delete a product catalog item
 app.delete("/api/products/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   const db = await getDBState();
+  const deletedProduct = db.products.find((p: any) => p.id === id);
   if (!db) return res.status(500).json({ error: "Database state inaccessible." });
 
   db.products = db.products || [];
@@ -1748,7 +1861,19 @@ app.delete("/api/products/:id", requireAdmin, async (req, res) => {
   }
 
   await saveDBState(db);
-  res.json({ success: true, message: "Product deleted from catalog." });
+
+await appendCurrentAdminActionLog(req, {
+  action: "DELETE_PRODUCT",
+  resourceType: "product",
+  resourceId: id,
+  resourceLabel: deletedProduct?.name || id,
+  details: {
+    productId: id,
+    name: deletedProduct?.name || ""
+  }
+});
+
+res.json({ success: true, message: "Product deleted from catalog." });
 });
 
 // Add a consultation service item
@@ -1770,6 +1895,17 @@ app.post("/api/services", requireAdmin, async (req, res) => {
   db.services = db.services || [];
   db.services.push(newService);
   await saveDBState(db);
+  await appendCurrentAdminActionLog(req, {
+  action: "CREATE_SERVICE",
+  resourceType: "service",
+  resourceId: newService.id,
+  resourceLabel: newService.name,
+  details: {
+    name: newService.name,
+    price: newService.price,
+    duration: newService.duration
+  }
+});
 
   res.status(201).json({ success: true, service: newService });
 });
@@ -1793,6 +1929,17 @@ app.put("/api/services/:id", requireAdmin, async (req, res) => {
     id, // Safe ID
   };
 
+await appendCurrentAdminActionLog(req, {
+  action: "UPDATE_SERVICE",
+  resourceType: "service",
+  resourceId: id,
+  resourceLabel: db.services[index].name,
+  details: {
+    serviceId: id,
+    changedKeys: Object.keys(updateData || {})
+  }
+});
+
   await saveDBState(db);
   res.json({ success: true, service: db.services[index] });
 });
@@ -1801,6 +1948,7 @@ app.put("/api/services/:id", requireAdmin, async (req, res) => {
 app.delete("/api/services/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   const db = await getDBState();
+  const deletedService = db.services.find((s: any) => s.id === id);
   if (!db) return res.status(500).json({ error: "Database state inaccessible." });
 
   db.services = db.services || [];
@@ -1812,6 +1960,16 @@ app.delete("/api/services/:id", requireAdmin, async (req, res) => {
   }
 
   await saveDBState(db);
+  await appendCurrentAdminActionLog(req, {
+  action: "DELETE_SERVICE",
+  resourceType: "service",
+  resourceId: id,
+  resourceLabel: deletedService?.name || id,
+  details: {
+    serviceId: id,
+    name: deletedService?.name || ""
+  }
+});
   res.json({ success: true, message: "Consultation package deleted." });
 });
 
@@ -1836,6 +1994,17 @@ app.put("/api/messages/:id/read", requireAdmin, async  (req, res) => {
 
   msg.isRead = !msg.isRead;
   await saveDBState(db);
+  await appendCurrentAdminActionLog(req, {
+  action: msg.isRead ? "MARK_MESSAGE_READ" : "MARK_MESSAGE_UNREAD",
+  resourceType: "contact_message",
+  resourceId: id,
+  resourceLabel: msg.subject || id,
+  details: {
+    messageId: id,
+    senderEmail: msg.senderEmail || "",
+    isRead: msg.isRead
+  }
+});
   res.json({ success: true, message: msg });
 });
 
@@ -1843,11 +2012,23 @@ app.put("/api/messages/:id/read", requireAdmin, async  (req, res) => {
 app.delete("/api/messages/:id", requireAdmin, async (req, res) => {
   const { id } = req.params;
   const db = await getDBState();
+  const deletedMessage = db.messages.find((m: any) => m.id === id);
   if (!db) return res.status(500).json({ error: "Database state inaccessible." });
 
   db.messages = db.messages || [];
   db.messages = db.messages.filter((m: any) => m.id !== id);
   await saveDBState(db);
+  await appendCurrentAdminActionLog(req, {
+  action: "DELETE_MESSAGE",
+  resourceType: "contact_message",
+  resourceId: id,
+  resourceLabel: deletedMessage?.subject || id,
+  details: {
+    messageId: id,
+    senderEmail: deletedMessage?.senderEmail || "",
+    subject: deletedMessage?.subject || ""
+  }
+});
 
   res.json({ success: true, message: "Contact lead successfully removed." });
 });

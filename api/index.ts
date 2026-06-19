@@ -1389,7 +1389,7 @@ const userLogPath = await createAdminUserLogFile(newUser, currentUser);
 
     return res.status(201).json({
       success: true,
-      user: publicAdminUser(newUser)
+      user: publicAdminUser(newUser),
       userLogPath
     });
   } catch (error: any) {

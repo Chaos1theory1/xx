@@ -904,7 +904,7 @@ app.post("/api/auth/request-reset", async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
 
     const userIndex = users.findIndex(
-      (u) => u.email.toLowerCase() === cleanEmail && u.isActive
+      (user) => user.email.toLowerCase() === cleanEmail && user.isActive
     );
 
     if (userIndex === -1) {
@@ -935,12 +935,16 @@ app.post("/api/auth/request-reset", async (req, res) => {
     console.log(`Alert:    This code is valid for 10 minutes.`);
     console.log(`=============================================================\n`);
 
-    const mailResult = await sendResetCodeEmail(adminEmail, code);
+    
+    const mailResult = await sendResetCodeEmail(users[userIndex].email, code);
+
+
+
 
     if (mailResult.realSent) {
       return res.json({
         success: true,
-        message: `A secure verification code has been dispatched to ${adminEmail} via Biotech-Agro Mail routing.`,
+        message: `A secure verification code has been dispatched to ${users[userIndex].email} via Biotech-Agro Mail routing.`,
         realSent: true
       });
     }
@@ -953,12 +957,12 @@ app.post("/api/auth/request-reset", async (req, res) => {
 
     return res.json({
       success: true,
-      message: `A security code has been generated for ${adminEmail} (Simulated Sandbox)`,
+      message: `A security code has been generated for ${users[userIndex].email} (Simulated Sandbox)`,
       simulatedCode: code,
       realSent: false
     });
   } catch (error: any) {
-    console.error("Password reset request failed:", error);
+    console.error("Password reset request failed: ${mailResult.error}");
 
     return res.status(500).json({
       error: error?.message || "Password reset request failed."
@@ -983,7 +987,7 @@ app.post("/api/auth/reset-password", async (req, res) => {
     const cleanEmail = String(email).trim().toLowerCase();
 
     const userIndex = users.findIndex(
-      (u) => u.email.toLowerCase() === cleanEmail && u.isActive
+      (user) => user.email.toLowerCase() === cleanEmail && user.isActive
     );
 
     if (userIndex === -1) {

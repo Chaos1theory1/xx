@@ -238,6 +238,14 @@ const fr: Record<string, string> = {
   "Lion’s Mane is being studied for possible effects on cognitive performance, focus, mood and perceived stress. Early human studies are promising, but the evidence is still developing and should not be read as a medical claim.": "Le Lion’s Mane fait l’objet de recherches sur ses effets possibles sur les performances cognitives, la concentration, l’humeur et le stress perçu. Les premières études chez l’être humain sont encourageantes, mais les preuves restent en développement et ne doivent pas être interprétées comme une allégation médicale.",
   "Nutritional composition varies with strain, substrate, growing conditions and processing.": "La composition nutritionnelle varie selon la souche, le substrat, les conditions de culture et la transformation.",
 
+
+  "Lion’s Mane": "Lion’s Mane",
+  "Growing guide": "Guide de culture",
+  "Learn to grow Lion’s Mane from inoculation to harvest with clear methods, practical conditions and visual checkpoints.": "Apprenez à cultiver le Lion’s Mane de l’inoculation à la récolte grâce à une méthode claire, des conditions pratiques et des repères visuels simples.",
+  "Beginner friendly": "Accessible aux débutants",
+  "Clear methods and practical conditions make the first grow easier to follow.": "Des méthodes claires et des conditions pratiques rendent la première culture plus facile à suivre.",
+  "Reliable growing process": "Méthode de culture fiable",
+  "Visual checkpoints help you recognise healthy growth and correct common problems early.": "Des repères visuels vous aident à reconnaître une croissance saine et à corriger rapidement les problèmes courants.",
 };
 
 const ar: Record<string, string> = {
@@ -478,6 +486,14 @@ const ar: Record<string, string> = {
   "Lion’s Mane is being studied for possible effects on cognitive performance, focus, mood and perceived stress. Early human studies are promising, but the evidence is still developing and should not be read as a medical claim.": "تجري دراسة فطر عرف الأسد لمعرفة تأثيراته المحتملة على الأداء المعرفي والتركيز والمزاج والإحساس بالتوتر. تبدو بعض الدراسات البشرية المبكرة واعدة، لكن الأدلة ما تزال قيد التطور ولا ينبغي اعتبارها ادعاءً طبياً.",
   "Nutritional composition varies with strain, substrate, growing conditions and processing.": "تختلف التركيبة الغذائية حسب السلالة والركيزة وظروف الزراعة وطريقة المعالجة.",
 
+
+  "Lion’s Mane": "عرف الأسد",
+  "Growing guide": "دليل الزراعة",
+  "Learn to grow Lion’s Mane from inoculation to harvest with clear methods, practical conditions and visual checkpoints.": "تعلّم زراعة فطر عرف الأسد من التلقيح حتى الحصاد من خلال خطوات واضحة وظروف عملية ومؤشرات بصرية سهلة المتابعة.",
+  "Beginner friendly": "مناسب للمبتدئين",
+  "Clear methods and practical conditions make the first grow easier to follow.": "تجعل الخطوات الواضحة والظروف العملية تجربة الزراعة الأولى أسهل في المتابعة.",
+  "Reliable growing process": "طريقة زراعة موثوقة",
+  "Visual checkpoints help you recognise healthy growth and correct common problems early.": "تساعدك المؤشرات البصرية على تمييز النمو السليم وتصحيح المشكلات الشائعة مبكراً.",
 };
 
 export function guideTranslate(text: string, language: GuideLanguage): string {

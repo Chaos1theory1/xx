@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -106,12 +106,12 @@ const guideImages = {
 };
 
 const sectionLinks = [
-  { id: "overview", label: "Overview" },
-  { id: "what-youll-need", label: "What you'll need" },
-  { id: "growing-steps", label: "Growing steps" },
-  { id: "healthy-growth", label: "Healthy growth" },
-  { id: "troubleshooting", label: "Troubleshooting" },
-  { id: "faq", label: "FAQ" },
+  { id: "overview", label: "Overview", icon: BookOpen },
+  { id: "what-youll-need", label: "What you'll need", icon: Package },
+  { id: "growing-steps", label: "Growing steps", icon: Sprout },
+  { id: "healthy-growth", label: "Healthy growth", icon: BadgeCheck },
+  { id: "troubleshooting", label: "Troubleshooting", icon: AlertTriangle },
+  { id: "faq", label: "FAQ", icon: CircleHelp },
 ] as const;
 
 const stepImages = [
@@ -291,118 +291,148 @@ function QuickLinkPill({ id, label }: { id: string; label: string }) {
 
 export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" }: LionsManeGuidePageProps) {
   const [openFaq, setOpenFaq] = useState<number>(0);
+  const [activeSection, setActiveSection] = useState("overview");
   const t = (text: string) => guideTranslate(text, currentLanguage);
   const stepsAfterRoute = growingSteps.slice(1);
 
+  useEffect(() => {
+    const sections = sectionLinks
+      .map((item) => document.getElementById(item.id))
+      .filter((section): section is HTMLElement => Boolean(section));
+
+    if (!sections.length) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible?.target?.id) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-22% 0px -58% 0px", threshold: [0.08, 0.25, 0.5] }
+    );
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <main dir={currentLanguage === "ar" ? "rtl" : "ltr"} className="bg-[#fcfcf9] text-stone-900">
-      <section className="relative overflow-hidden border-b border-stone-200/70 bg-[#fcfcf9] px-4 pb-12 pt-16 sm:px-6 lg:px-8">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/4 top-12 h-48 w-48 rounded-full bg-emerald-100/70 blur-3xl" />
-          <div className="absolute bottom-0 right-1/4 h-44 w-44 rounded-full bg-stone-100 blur-3xl" />
-        </div>
+      <section className="relative overflow-hidden border-b border-stone-200/70 bg-gradient-to-br from-white via-[#fcfcf9] to-emerald-50/30 px-4 pb-8 pt-10 sm:px-6 lg:px-8 lg:pt-14">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-8 flex items-center gap-2 text-xs font-medium text-stone-500">
+            <span>{t("Growing Guides")}</span>
+            <ChevronRight className="h-3.5 w-3.5 text-stone-300" />
+            <span className="text-stone-800">{t("Lion’s Mane")}</span>
+          </div>
 
-        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-          <div className="space-y-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-100/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-              <Sprout className="h-3.5 w-3.5" /> {t("Growing Guides")}
-            </span>
-
-            <div className="space-y-4">
-              <h1 className="font-display text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
-                {t('Lion’s Mane Growing Guide')}
+          <div className="grid gap-8 lg:grid-cols-[0.88fr_1.12fr] lg:items-center">
+            <div className="relative z-10 py-4 lg:py-10">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-emerald-800">{t("Growing guide")}</p>
+              <h1 className="mt-5 font-display text-5xl font-semibold tracking-[-0.04em] text-stone-950 sm:text-6xl lg:text-7xl">
+                {t("Lion’s Mane")}
               </h1>
-              <p className="max-w-2xl text-lg leading-relaxed text-stone-600 sm:text-xl">
-                {t('A simple, confidence-building guide that takes first-time growers from their first Lion’s Mane setup to a healthy first harvest.')}
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-stone-600 sm:text-xl">
+                {t("Learn to grow Lion’s Mane from inoculation to harvest with clear methods, practical conditions and visual checkpoints.")}
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {guideStats.map((item) => (
-                <div key={item.label} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t(item.label)}</p>
-                  <h2 className="mt-2 font-display text-lg font-semibold tracking-tight text-stone-900">{t(item.value)}</h2>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{t(item.hint)}</p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex flex-col gap-3 pt-2 sm:flex-row">
-              <button
-                onClick={() => onNavigate?.("products")}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-stone-800"
-              >
-                {t("Explore Lion’s Mane Products")} <ArrowRight className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => onNavigate?.("contact")}
-                className="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-semibold text-stone-800 transition hover:bg-stone-50"
-              >
-                {t('Ask for Growing Support')}
-              </button>
+            <div className="relative min-h-[300px] overflow-hidden rounded-[2rem] bg-white sm:min-h-[360px] lg:min-h-[410px] lg:rounded-none lg:bg-transparent">
+              <img
+                src="/images/guides/lions-mane/hero-clean-lions-mane.avif"
+                alt={guideImages.hero.alt}
+                className="absolute inset-0 h-full w-full object-contain object-center lg:object-right"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#fcfcf9] to-transparent" />
             </div>
           </div>
-
-          <GuideImageCard
-            src={guideImages.hero.src}
-            alt={guideImages.hero.alt}
-            eyebrow={t('Beginner-friendly guide')}
-            title={t('Grow a healthy first batch with a clean, simple setup')}
-            caption={t('Follow the process from choosing a good starting route to harvest and a possible second flush.')}
-            size="hero"
-          />
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="overflow-x-auto rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm">
-          <nav className="flex min-w-max items-center gap-2" aria-label={t("Lion's Mane guide sections")}>
-            {sectionLinks.map((item, index) => (
-              <div key={item.id} className="inline-flex items-center gap-2">
-                <QuickLinkPill id={item.id} label={t(item.label)} />
-                {index !== sectionLinks.length - 1 && <ChevronRight className="h-4 w-4 text-stone-300" />}
-              </div>
-            ))}
+      <section className="sticky top-16 z-30 mx-auto -mt-2 max-w-7xl px-4 sm:px-6 lg:top-20 lg:px-8">
+        <div className="overflow-x-auto rounded-[1.6rem] border border-stone-200 bg-white/95 p-2 shadow-[0_14px_35px_rgba(28,25,23,0.10)] backdrop-blur-md">
+          <nav className="grid min-w-[760px] grid-cols-6" aria-label={t("Lion's Mane guide sections")}>
+            {sectionLinks.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeSection === item.id;
+              return (
+                <a
+                  key={item.id}
+                  href={`#${item.id}`}
+                  onClick={() => setActiveSection(item.id)}
+                  className={`group relative flex min-h-[92px] flex-col items-center justify-center gap-2 border-e border-stone-100 px-3 text-center transition last:border-e-0 ${
+                    isActive ? "bg-emerald-50/70 text-emerald-900" : "text-stone-700 hover:bg-stone-50"
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${isActive ? "text-emerald-700" : "text-emerald-800/80"}`} />
+                  <span className="text-sm font-semibold">{t(item.label)}</span>
+                  <span className={`absolute inset-x-3 bottom-0 h-0.5 rounded-full transition ${isActive ? "bg-emerald-600" : "bg-transparent"}`} />
+                </a>
+              );
+            })}
           </nav>
         </div>
       </section>
 
-      <section id="overview" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-6 sm:px-6 lg:px-8">
-        <div className="max-w-3xl space-y-3">
-          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            {t('Overview')}
-          </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('What are Lion’s Mane mushrooms?')}</h2>
-          <p className="text-base leading-relaxed text-stone-600">
-            {t('Lion’s Mane is a gourmet mushroom recognised by its white cascading spines and dense, rounded shape. It grows best on hardwood-based substrates and is especially popular with home growers because the growth stages are easy to follow.')}
-          </p>
-        </div>
+      <section id="overview" className="mx-auto max-w-7xl scroll-mt-48 space-y-8 px-4 py-10 sm:px-6 lg:px-8 lg:py-12">
+        <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-stretch">
+          <article className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
+              {t("Overview")}
+            </span>
+            <h2 className="mt-5 font-display text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+              {t("What are Lion’s Mane mushrooms?")}
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-stone-600">
+              {t("Lion’s Mane is a gourmet mushroom recognised by its white cascading spines and dense, rounded shape. It grows best on hardwood-based substrates and is especially popular with home growers because the growth stages are easy to follow.")}
+            </p>
 
-        <div className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
-          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('Why beginners like it')}</h3>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-7 grid gap-3 sm:grid-cols-2">
               {[
                 "The growth stages are easy to recognise, from white colonisation to compact fruiting clusters.",
                 "It performs well on hardwood-based substrate, which keeps the starting method clear and consistent.",
                 "A single fruiting opening usually produces a neat, easy-to-manage first flush.",
                 "With stable humidity and fresh air, the first harvest can be very rewarding even for a beginner.",
               ].map((item) => (
-                <div key={item} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-600">
+                <div key={item} className="rounded-2xl border border-stone-200 bg-stone-50/80 p-4 text-sm leading-relaxed text-stone-600">
                   {t(item)}
                 </div>
               ))}
             </div>
-          </div>
+          </article>
 
-          <GuideImageCard
-            src={guideImages.overview.src}
-            alt={guideImages.overview.alt}
-            eyebrow={t('Know the mushroom')}
-            title={t('Healthy Lion’s Mane should look bright, dense and fresh')}
-            caption={t('A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest.')}
-            size="tall"
-          />
+          <aside className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+            <div className="divide-y divide-stone-100">
+              <div className="flex gap-4 pb-6">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                  <Sprout className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-stone-950">{t("Beginner friendly")}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{t("Clear methods and practical conditions make the first grow easier to follow.")}</p>
+                </div>
+              </div>
+              <div className="flex gap-4 py-6">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                  <BadgeCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display text-xl font-semibold text-stone-950">{t("Reliable growing process")}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{t("Visual checkpoints help you recognise healthy growth and correct common problems early.")}</p>
+                </div>
+              </div>
+              <div className="pt-6">
+                <GuideImageCard
+                  src={guideImages.overview.src}
+                  alt={guideImages.overview.alt}
+                  eyebrow={t("Know the mushroom")}
+                  title={t("Healthy Lion’s Mane should look bright, dense and fresh")}
+                  caption={t("A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest.")}
+                  size="default"
+                />
+              </div>
+            </div>
+          </aside>
         </div>
 
         <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-7 lg:p-8">

@@ -28,9 +28,11 @@ import {
   growingSteps,
   healthyVsWarning,
 } from "./lionsManeGuideData";
+import { guideTranslate, type GuideLanguage } from "./lionsManeGuideTranslations";
 
 type LionsManeGuidePageProps = {
   onNavigate?: (page: string) => void;
+  currentLanguage?: GuideLanguage;
 };
 
 type GuideImageCardProps = {
@@ -282,12 +284,13 @@ function QuickLinkPill({ id, label }: { id: string; label: string }) {
   );
 }
 
-export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePageProps) {
+export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" }: LionsManeGuidePageProps) {
   const [openFaq, setOpenFaq] = useState<number>(0);
+  const t = (text: string) => guideTranslate(text, currentLanguage);
   const stepsAfterRoute = growingSteps.slice(1);
 
   return (
-    <main className="bg-[#fcfcf9] text-stone-900">
+    <main dir={currentLanguage === "ar" ? "rtl" : "ltr"} className="bg-[#fcfcf9] text-stone-900">
       <section className="relative overflow-hidden border-b border-stone-200/70 bg-[#fcfcf9] px-4 pb-12 pt-16 sm:px-6 lg:px-8">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute left-1/4 top-12 h-48 w-48 rounded-full bg-emerald-100/70 blur-3xl" />
@@ -297,24 +300,24 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
         <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div className="space-y-6">
             <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-100/80 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-              <Sprout className="h-3.5 w-3.5" /> Growing Guides
+              <Sprout className="h-3.5 w-3.5" /> {t("Growing Guides")}
             </span>
 
             <div className="space-y-4">
               <h1 className="font-display text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl lg:text-6xl">
-                Lion’s Mane Growing Guide
+                {t('Lion’s Mane Growing Guide')}
               </h1>
               <p className="max-w-2xl text-lg leading-relaxed text-stone-600 sm:text-xl">
-                A simple, confidence-building guide that takes first-time growers from their first Lion’s Mane setup to a healthy first harvest.
+                {t('A simple, confidence-building guide that takes first-time growers from their first Lion’s Mane setup to a healthy first harvest.')}
               </p>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
               {guideStats.map((item) => (
                 <div key={item.label} className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{item.label}</p>
-                  <h2 className="mt-2 font-display text-lg font-semibold tracking-tight text-stone-900">{item.value}</h2>
-                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{item.hint}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t(item.label)}</p>
+                  <h2 className="mt-2 font-display text-lg font-semibold tracking-tight text-stone-900">{t(item.value)}</h2>
+                  <p className="mt-1 text-sm leading-relaxed text-stone-600">{t(item.hint)}</p>
                 </div>
               ))}
             </div>
@@ -324,13 +327,13 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                 onClick={() => onNavigate?.("products")}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-900 px-6 py-3 text-sm font-semibold text-white transition hover:-translate-y-0.5 hover:bg-stone-800"
               >
-                Explore Lion’s Mane Products <ArrowRight className="h-4 w-4" />
+                {t("Explore Lion’s Mane Products")} <ArrowRight className="h-4 w-4" />
               </button>
               <button
                 onClick={() => onNavigate?.("contact")}
                 className="inline-flex items-center justify-center rounded-xl border border-stone-200 bg-white px-6 py-3 text-sm font-semibold text-stone-800 transition hover:bg-stone-50"
               >
-                Ask for Growing Support
+                {t('Ask for Growing Support')}
               </button>
             </div>
           </div>
@@ -338,9 +341,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
           <GuideImageCard
             src={guideImages.hero.src}
             alt={guideImages.hero.alt}
-            eyebrow="Beginner-friendly guide"
-            title="Grow a healthy first batch with a clean, simple setup"
-            caption="Follow the process from choosing a good starting route to harvest and a possible second flush."
+            eyebrow={t('Beginner-friendly guide')}
+            title={t('Grow a healthy first batch with a clean, simple setup')}
+            caption={t('Follow the process from choosing a good starting route to harvest and a possible second flush.')}
             size="hero"
           />
         </div>
@@ -348,10 +351,10 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="overflow-x-auto rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm">
-          <nav className="flex min-w-max items-center gap-2" aria-label="Lion's Mane guide sections">
+          <nav className="flex min-w-max items-center gap-2" aria-label={t("Lion's Mane guide sections")}>
             {sectionLinks.map((item, index) => (
               <div key={item.id} className="inline-flex items-center gap-2">
-                <QuickLinkPill id={item.id} label={item.label} />
+                <QuickLinkPill id={item.id} label={t(item.label)} />
                 {index !== sectionLinks.length - 1 && <ChevronRight className="h-4 w-4 text-stone-300" />}
               </div>
             ))}
@@ -362,18 +365,18 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section id="overview" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-3xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            Overview
+            {t('Overview')}
           </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">What are Lion’s Mane mushrooms?</h2>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('What are Lion’s Mane mushrooms?')}</h2>
           <p className="text-base leading-relaxed text-stone-600">
-            Lion’s Mane is a gourmet mushroom recognised by its white cascading spines and dense, rounded shape. It grows best on hardwood-based substrates and is especially popular with home growers because the growth stages are easy to follow.
+            {t('Lion’s Mane is a gourmet mushroom recognised by its white cascading spines and dense, rounded shape. It grows best on hardwood-based substrates and is especially popular with home growers because the growth stages are easy to follow.')}
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
           <div className="space-y-6">
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">Why beginners like it</h3>
+              <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('Why beginners like it')}</h3>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {[
                   "The growth stages are easy to recognise, from white colonisation to compact fruiting clusters.",
@@ -382,7 +385,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                   "With stable humidity and fresh air, the first harvest can be very rewarding even for a beginner.",
                 ].map((item) => (
                   <div key={item} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-600">
-                    {item}
+                    {t(item)}
                   </div>
                 ))}
               </div>
@@ -390,10 +393,10 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
 
             <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
               <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Nutrition benefits</p>
-                <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">A nutritious gourmet mushroom for everyday cooking</h3>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Nutrition benefits')}</p>
+                <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('A nutritious gourmet mushroom for everyday cooking')}</h3>
                 <p className="text-sm leading-relaxed text-stone-600">
-                  Lion’s Mane is valued for its texture in the kitchen as well as its clean, attractive appearance. It fits easily into simple meals and balanced diets.
+                  {t("Lion’s Mane is valued for its texture in the kitchen as well as its clean, attractive appearance. It fits easily into simple meals and balanced diets.")}
                 </p>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -416,8 +419,8 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                   },
                 ].map((benefit) => (
                   <div key={benefit.title} className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                    <h4 className="font-display text-lg font-semibold tracking-tight text-stone-900">{benefit.title}</h4>
-                    <p className="mt-2 text-sm leading-relaxed text-stone-600">{benefit.text}</p>
+                    <h4 className="font-display text-lg font-semibold tracking-tight text-stone-900">{t(benefit.title)}</h4>
+                    <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(benefit.text)}</p>
                   </div>
                 ))}
               </div>
@@ -427,9 +430,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
           <GuideImageCard
             src={guideImages.overview.src}
             alt={guideImages.overview.alt}
-            eyebrow="Know the mushroom"
-            title="Healthy Lion’s Mane should look bright, dense and fresh"
-            caption="A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest." 
+            eyebrow={t('Know the mushroom')}
+            title={t('Healthy Lion’s Mane should look bright, dense and fresh')}
+            caption={t('A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest.')} 
             size="tall"
           />
         </div>
@@ -438,11 +441,11 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section id="what-youll-need" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            What you'll need
+            {t("What you'll need")}
           </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">A simple setup is enough to get started</h2>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('A simple setup is enough to get started')}</h2>
           <p className="text-base leading-relaxed text-stone-600">
-            Start with a clean culture or spawn source, the right hardwood-based substrate and a tidy place to work.
+            {t('Start with a clean culture or spawn source, the right hardwood-based substrate and a tidy place to work.')}
           </p>
         </div>
 
@@ -454,8 +457,8 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
                   <Icon className="h-6 w-6" />
                 </div>
-                <h3 className="font-display text-lg font-semibold tracking-tight text-stone-900">{need.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-stone-600">{need.text}</p>
+                <h3 className="font-display text-lg font-semibold tracking-tight text-stone-900">{t(need.title)}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(need.text)}</p>
               </article>
             );
           })}
@@ -465,15 +468,15 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
           <GuideImageCard
             src={guideImages.needTools.src}
             alt={guideImages.needTools.alt}
-            eyebrow="Starter materials"
-            title="Everything you need for a clean first batch"
-            caption="A simple kit can include your culture or spawn, a prepared bag, gloves, a spray bottle and basic temperature or humidity monitoring."
+            eyebrow={t('Starter materials')}
+            title={t('Everything you need for a clean first batch')}
+            caption={t('A simple kit can include your culture or spawn, a prepared bag, gloves, a spray bottle and basic temperature or humidity monitoring.')}
             size="full"
           />
 
           <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Starter checklist</p>
-            <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-stone-950">Before you begin</h3>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Starter checklist')}</p>
+            <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-stone-950">{t('Before you begin')}</h3>
             <div className="mt-5 space-y-3">
               {[
                 "Choose one starting route: ready-to-fruit block, ready-to-inoculate bag, or grain spawn route.",
@@ -483,7 +486,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
               ].map((item) => (
                 <div key={item} className="flex items-start gap-3 rounded-2xl border border-stone-200 bg-stone-50 p-4">
                   <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
-                  <p className="text-sm leading-relaxed text-stone-700">{item}</p>
+                  <p className="text-sm leading-relaxed text-stone-700">{t(item)}</p>
                 </div>
               ))}
             </div>
@@ -495,20 +498,20 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-4xl space-y-3">
             <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-              Step-by-step journey
+              {t('Step-by-step journey')}
             </span>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">From first inoculation to first harvest</h2>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('From first inoculation to first harvest')}</h2>
             <p className="text-base leading-relaxed text-stone-600">
-              Follow one clear route, keep the conditions steady and move step by step from inoculation to fruiting and harvest.
+              {t('Follow one clear route, keep the conditions steady and move step by step from inoculation to fruiting and harvest.')}
             </p>
           </div>
 
           <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-600 shadow-sm lg:max-w-md">
             <div className="flex items-center gap-2 text-stone-900">
               <TimerReset className="h-4 w-4 text-emerald-700" />
-              <span className="font-medium">Quick timeline</span>
+              <span className="font-medium">{t('Quick timeline')}</span>
             </div>
-            <p className="mt-1">Inoculate cleanly, let the block colonise fully, then fruit it under humid and fresh-air-rich conditions.</p>
+            <p className="mt-1">{t('Inoculate cleanly, let the block colonise fully, then fruit it under humid and fresh-air-rich conditions.')}</p>
           </div>
         </div>
 
@@ -517,9 +520,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
             <div className="flex items-start gap-4">
               <div className="font-display text-3xl font-bold text-amber-400">01</div>
               <div className="space-y-3">
-                <h3 className="font-display text-3xl font-bold tracking-tight text-white">Choose the right growing method</h3>
+                <h3 className="font-display text-3xl font-bold tracking-tight text-white">{t('Choose the right growing method')}</h3>
                 <p className="max-w-4xl text-base leading-relaxed text-stone-300">
-                  There is more than one correct way to grow Lion’s Mane. Choose one route and follow that method instead of mixing steps from different systems.
+                  {t("There is more than one correct way to grow Lion’s Mane. Choose one route and follow that method instead of mixing steps from different systems.")}
                 </p>
               </div>
             </div>
@@ -527,16 +530,16 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
             <div className="mt-8 grid gap-4 lg:grid-cols-2">
               {startingRoutes.map((route) => (
                 <div key={route.label} className="rounded-[1.75rem] border border-stone-700 bg-gradient-to-br from-stone-900 to-stone-950 p-6 shadow-inner">
-                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-400">{route.label}</p>
-                  <h4 className="mt-3 font-display text-2xl font-semibold tracking-tight text-white">{route.title}</h4>
-                  <p className="mt-3 text-sm leading-relaxed text-stone-300">{route.body}</p>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-amber-400">{t(route.label)}</p>
+                  <h4 className="mt-3 font-display text-2xl font-semibold tracking-tight text-white">{t(route.title)}</h4>
+                  <p className="mt-3 text-sm leading-relaxed text-stone-300">{t(route.body)}</p>
                 </div>
               ))}
             </div>
 
             <div className="mt-6 rounded-[1.5rem] border border-amber-500/40 bg-amber-500/10 p-5">
               <p className="text-sm leading-relaxed text-amber-50">
-                <span className="font-semibold text-white">Important:</span> Do not inject liquid culture directly into ordinary bulk hardwood substrate. Liquid culture should first colonise sterilised grain, or be used only with a bag that is specifically designed with a grain section and an injection port.
+                <span className="font-semibold text-white">{t("Important:")}</span> {t("Do not inject liquid culture directly into ordinary bulk hardwood substrate. Liquid culture should first colonise sterilised grain, or be used only with a bag that is specifically designed with a grain section and an injection port.")}
               </p>
             </div>
           </div>
@@ -548,9 +551,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
               <GuideImageCard
                 src={stepImages[index].src}
                 alt={stepImages[index].alt}
-                eyebrow={stepVisualCopy[index].eyebrow}
-                title={stepVisualCopy[index].title}
-                caption={stepVisualCopy[index].caption}
+                eyebrow={t(stepVisualCopy[index].eyebrow)}
+                title={t(stepVisualCopy[index].title)}
+                caption={t(stepVisualCopy[index].caption)}
                 size="full"
               />
 
@@ -560,19 +563,19 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                     {step.step}
                   </div>
                   <div className="space-y-2">
-                    <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{step.title}</h3>
-                    <p className="text-base leading-relaxed text-stone-600">{step.body}</p>
+                    <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t(step.title)}</h3>
+                    <p className="text-base leading-relaxed text-stone-600">{t(step.body)}</p>
                   </div>
                 </div>
 
                 {step.noteType && step.noteTitle && step.noteText ? (
-                  <NoteBox type={step.noteType} title={step.noteTitle} text={step.noteText} />
+                  <NoteBox type={step.noteType} title={t(step.noteTitle)} text={t(step.noteText)} />
                 ) : null}
 
                 {step.step === "02" ? (
                   <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Product shortcut</p>
-                    <h4 className="mt-2 font-display text-lg font-semibold text-stone-900">Need starter materials?</h4>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Product shortcut')}</p>
+                    <h4 className="mt-2 font-display text-lg font-semibold text-stone-900">{t('Need starter materials?')}</h4>
                     <p className="mt-1 text-sm leading-relaxed text-stone-600">
                       <a
                         href="/products"
@@ -584,7 +587,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                         }}
                         className="font-medium text-emerald-800 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900"
                       >
-                        View Lion’s Mane cultures, grain spawn and ready-to-inoculate options on the Products page.
+                        {t("View Lion’s Mane cultures, grain spawn and ready-to-inoculate options on the Products page.")}
                       </a>
                     </p>
                   </div>
@@ -594,21 +597,21 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                   <div className="grid gap-3 sm:grid-cols-3">
                     <div className="rounded-2xl border border-stone-200 bg-emerald-50/60 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-stone-900">
-                        <Thermometer className="h-4 w-4 text-emerald-700" /> Fruiting temperature
+                        <Thermometer className="h-4 w-4 text-emerald-700" /> {t("Fruiting temperature")}
                       </div>
-                      <p className="mt-2 text-sm text-stone-600">A practical beginner range is about 16–21°C.</p>
+                      <p className="mt-2 text-sm text-stone-600">{t('A practical beginner range is about 16–21°C.')}</p>
                     </div>
                     <div className="rounded-2xl border border-stone-200 bg-emerald-50/60 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-stone-900">
-                        <Droplets className="h-4 w-4 text-emerald-700" /> Humidity
+                        <Droplets className="h-4 w-4 text-emerald-700" /> {t("Humidity")}
                       </div>
-                      <p className="mt-2 text-sm text-stone-600">Keep air humid, often around 85–95%, without making the fruit soggy.</p>
+                      <p className="mt-2 text-sm text-stone-600">{t('Keep air humid, often around 85–95%, without making the fruit soggy.')}</p>
                     </div>
                     <div className="rounded-2xl border border-stone-200 bg-emerald-50/60 p-4">
                       <div className="flex items-center gap-2 text-sm font-semibold text-stone-900">
-                        <Wind className="h-4 w-4 text-emerald-700" /> Fresh air
+                        <Wind className="h-4 w-4 text-emerald-700" /> {t("Fresh air")}
                       </div>
-                      <p className="mt-2 text-sm text-stone-600">Use gentle, regular air exchange rather than stagnant sealed air.</p>
+                      <p className="mt-2 text-sm text-stone-600">{t('Use gentle, regular air exchange rather than stagnant sealed air.')}</p>
                     </div>
                   </div>
                 ) : null}
@@ -621,10 +624,10 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section id="healthy-growth" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-8 pb-12 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            What should it look like?
+            {t('What should it look like?')}
           </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">Healthy progress versus warning signs</h2>
-          <p className="text-base leading-relaxed text-stone-600">Compare healthy growth with the most common warning signs.</p>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('Healthy progress versus warning signs')}</h2>
+          <p className="text-base leading-relaxed text-stone-600">{t('Compare healthy growth with the most common warning signs.')}</p>
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -634,17 +637,17 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                 <CheckCircle2 className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">Healthy signs</p>
-                <h3 className="font-display text-xl font-bold tracking-tight text-stone-950">This is what you want to see</h3>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">{t('Healthy signs')}</p>
+                <h3 className="font-display text-xl font-bold tracking-tight text-stone-950">{t('This is what you want to see')}</h3>
               </div>
             </div>
 
             <GuideImageCard
               src={guideImages.healthy.src}
               alt={guideImages.healthy.alt}
-              eyebrow="Healthy example"
-              title="Clean white growth and fresh fruiting"
-              caption="Healthy Lion’s Mane usually looks evenly colonised, bright white and compact before the spines lengthen near harvest."
+              eyebrow={t('Healthy example')}
+              title={t('Clean white growth and fresh fruiting')}
+              caption={t('Healthy Lion’s Mane usually looks evenly colonised, bright white and compact before the spines lengthen near harvest.')}
               size="tall"
             />
 
@@ -652,7 +655,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
               {healthyVsWarning.healthy.map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-                  <span>{item}</span>
+                  <span>{t(item)}</span>
                 </li>
               ))}
             </ul>
@@ -664,17 +667,17 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                 <AlertTriangle className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-700">Warning signs</p>
-                <h3 className="font-display text-xl font-bold tracking-tight text-stone-950">Things that need attention</h3>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-rose-700">{t('Warning signs')}</p>
+                <h3 className="font-display text-xl font-bold tracking-tight text-stone-950">{t('Things that need attention')}</h3>
               </div>
             </div>
 
             <GuideImageCard
               src={guideImages.warning.src}
               alt={guideImages.warning.alt}
-              eyebrow="Warning example"
-              title="Contamination, discoloration or stalled growth"
-              caption="Green, dark, slimy or sour-looking growth is a strong warning sign and should be handled carefully away from healthy blocks."
+              eyebrow={t('Warning example')}
+              title={t('Contamination, discoloration or stalled growth')}
+              caption={t('Green, dark, slimy or sour-looking growth is a strong warning sign and should be handled carefully away from healthy blocks.')}
               size="tall"
             />
 
@@ -682,7 +685,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
               {healthyVsWarning.warning.map((item) => (
                 <li key={item} className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-700" />
-                  <span>{item}</span>
+                  <span>{t(item)}</span>
                 </li>
               ))}
             </ul>
@@ -693,23 +696,23 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section id="troubleshooting" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            Troubleshooting
+            {t('Troubleshooting')}
           </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">Common issues made simple</h2>
-          <p className="text-base leading-relaxed text-stone-600">Spot the symptom, check the likely cause and correct the growing conditions early.</p>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('Common issues made simple')}</h2>
+          <p className="text-base leading-relaxed text-stone-600">{t('Spot the symptom, check the likely cause and correct the growing conditions early.')}</p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {commonIssues.map((issue) => (
             <article key={issue.symptom} className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Symptom</p>
-              <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-stone-900">{issue.symptom}</h3>
+              <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Symptom')}</p>
+              <h3 className="mt-2 font-display text-lg font-semibold tracking-tight text-stone-900">{t(issue.symptom)}</h3>
 
-              <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Likely cause</p>
-              <p className="mt-2 text-sm leading-relaxed text-stone-600">{issue.cause}</p>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Likely cause')}</p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(issue.cause)}</p>
 
-              <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">Simple solution</p>
-              <p className="mt-2 text-sm leading-relaxed text-stone-600">{issue.solution}</p>
+              <p className="mt-4 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Simple solution')}</p>
+              <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(issue.solution)}</p>
             </article>
           ))}
         </div>
@@ -718,9 +721,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section id="faq" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
         <div className="max-w-3xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-            FAQ
+            {t('FAQ')}
           </span>
-          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">Frequently asked beginner questions</h2>
+          <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('Frequently asked beginner questions')}</h2>
         </div>
 
         <div className="space-y-3">
@@ -731,12 +734,12 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                 <button
                   type="button"
                   onClick={() => setOpenFaq(isOpen ? -1 : index)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left"
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-start"
                 >
-                  <span className="font-display text-lg font-semibold tracking-tight text-stone-900">{faq.question}</span>
+                  <span className="font-display text-lg font-semibold tracking-tight text-stone-900">{t(faq.question)}</span>
                   <ChevronDown className={`h-5 w-5 shrink-0 text-stone-500 transition ${isOpen ? "rotate-180" : ""}`} />
                 </button>
-                {isOpen ? <div className="border-t border-stone-100 px-5 py-4 text-sm leading-relaxed text-stone-600">{faq.answer}</div> : null}
+                {isOpen ? <div className="border-t border-stone-100 px-5 py-4 text-sm leading-relaxed text-stone-600">{t(faq.answer)}</div> : null}
               </article>
             );
           })}
@@ -746,9 +749,9 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-6 sm:px-6 lg:px-8">
         <div className="rounded-[2rem] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-stone-50 p-8 shadow-sm">
           <div className="max-w-4xl space-y-3">
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">Continue learning</p>
-            <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">Explore the next helpful pages</h2>
-            <p className="text-base leading-relaxed text-stone-600">Go deeper into grow-bag growing, substrate preparation or batch planning.</p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">{t('Continue learning')}</p>
+            <h2 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('Explore the next helpful pages')}</h2>
+            <p className="text-base leading-relaxed text-stone-600">{t('Go deeper into grow-bag growing, substrate preparation or batch planning.')}</p>
           </div>
 
           <div className="mt-8 grid gap-4 lg:grid-cols-3">
@@ -769,10 +772,10 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-800">
                     <Icon className="h-6 w-6" />
                   </div>
-                  <h3 className="mt-4 font-display text-xl font-bold tracking-tight text-stone-950">{resource.title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-stone-600">{resource.body}</p>
+                  <h3 className="mt-4 font-display text-xl font-bold tracking-tight text-stone-950">{t(resource.title)}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(resource.body)}</p>
                   <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-stone-900 transition group-hover:text-emerald-800">
-                    Open page <ArrowRight className="h-4 w-4" />
+                    {t("Open page")} <ArrowRight className="h-4 w-4" />
                   </span>
                 </a>
               );

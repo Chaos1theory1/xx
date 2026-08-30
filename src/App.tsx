@@ -3808,19 +3808,22 @@ const handleUploadHeroBackground = async (file: File) => {
             SCREEN: LION'S MANE GROWING GUIDE
             ========================================== */}
         {activePage === "guide-lions-mane" && (
-          <LionsManeGuidePage onNavigate={handlePageNavigate} />
+          <LionsManeGuidePage
+  onNavigate={handlePageNavigate}
+  currentLanguage={currentLanguage}
+/>
         )}
 
         {activePage === "guide-lions-mane-ready-bag" && (
-          <GuideResourcePage kind="ready-bag" onNavigate={handlePageNavigate} />
+          <GuideResourcePage kind="ready-bag" onNavigate={handlePageNavigate} currentLanguage={currentLanguage} />
         )}
 
         {activePage === "guide-substrate-preparation" && (
-          <GuideResourcePage kind="substrate" onNavigate={handlePageNavigate} />
+          <GuideResourcePage kind="substrate" onNavigate={handlePageNavigate} currentLanguage={currentLanguage} />
         )}
 
         {activePage === "tool-substrate-calculator" && (
-          <GuideResourcePage kind="calculator" onNavigate={handlePageNavigate} />
+          <GuideResourcePage kind="calculator" onNavigate={handlePageNavigate} currentLanguage={currentLanguage} />
         )}
 
         {/* ==========================================

@@ -1,11 +1,13 @@
 import React from "react";
 import { ArrowLeft, BookOpen, Calculator, Package, Sprout } from "lucide-react";
+import { guideTranslate, type GuideLanguage } from "./lionsManeGuideTranslations";
 
 type ResourceKind = "ready-bag" | "substrate" | "calculator";
 
 type GuideResourcePageProps = {
   kind: ResourceKind;
   onNavigate: (page: string) => void;
+  currentLanguage?: GuideLanguage;
 };
 
 const resources = {
@@ -29,19 +31,24 @@ const resources = {
   },
 } as const;
 
-export default function GuideResourcePage({ kind, onNavigate }: GuideResourcePageProps) {
+export default function GuideResourcePage({ kind, onNavigate, currentLanguage = "en" }: GuideResourcePageProps) {
   const resource = resources[kind];
   const Icon = resource.icon;
+  const t = (text: string) => guideTranslate(text, currentLanguage);
 
   return (
-    <main className="min-h-[70vh] bg-[#fcfcf9] px-4 py-16 text-stone-900 sm:px-6 lg:px-8">
+    <main
+      dir={currentLanguage === "ar" ? "rtl" : "ltr"}
+      className="min-h-[70vh] bg-[#fcfcf9] px-4 py-16 text-stone-900 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-5xl">
         <button
           type="button"
           onClick={() => onNavigate("guide-lions-mane")}
           className="inline-flex items-center gap-2 text-sm font-semibold text-stone-600 transition hover:text-emerald-800"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to Lion’s Mane Growing Guide
+          <ArrowLeft className={`h-4 w-4 ${currentLanguage === "ar" ? "rotate-180" : ""}`} />
+          {t("Back to Lion’s Mane Growing Guide")}
         </button>
 
         <section className="mt-8 overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
@@ -51,16 +58,18 @@ export default function GuideResourcePage({ kind, onNavigate }: GuideResourcePag
             </div>
             <div className="mt-6 max-w-3xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
-                <Sprout className="h-3.5 w-3.5" /> {resource.badge}
+                <Sprout className="h-3.5 w-3.5" /> {t(resource.badge)}
               </span>
-              <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">{resource.title}</h1>
-              <p className="mt-5 text-lg leading-relaxed text-stone-600">{resource.intro}</p>
+              <h1 className="mt-4 font-display text-4xl font-bold tracking-tight text-stone-950 sm:text-5xl">
+                {t(resource.title)}
+              </h1>
+              <p className="mt-5 text-lg leading-relaxed text-stone-600">{t(resource.intro)}</p>
             </div>
           </div>
 
           <div className="border-t border-stone-200 p-8 sm:p-10">
             <p className="text-sm leading-relaxed text-stone-600">
-              Detailed Biotech Agro guidance for this topic will live on this page, keeping the growing guide connected to a clear next step without sending visitors away from the website.
+              {t("Detailed Biotech Agro guidance for this topic will live on this page, keeping the growing guide connected to a clear next step without sending visitors away from the website.")}
             </p>
           </div>
         </section>

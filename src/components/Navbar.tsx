@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { Sprout, Lock, Unlock, Menu, X, Settings, Globe } from "lucide-react";
 
+
+
+<button
+  onClick={() => onNavigate("guide-lions-mane")}
+  className="..."
+>
+  Growing Guides
+</button>
+
+
 interface NavbarProps {
   activePage: string;
   onNavigate: (page: string) => void;

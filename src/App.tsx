@@ -42,7 +42,7 @@ import Footer from "./components/Footer";
 import GoogleDriveVault from "./components/GoogleDriveVault";
 import { Product, Service, ContactMessage, SiteContent, DatabaseState, ProductCategory, ProductStatus, TeamMember, Certification, FeatureItem, CatalogSection, GalleryImage } from "./types";
 import { i18n } from "./translations";
-
+import LionsManeGuidePage from "./components/guides/LionsManeGuidePage";
 
 // Floating-overlay or in-place inline text editor for admin live editing
 function EditableText({
@@ -5315,6 +5315,16 @@ const handleUploadHeroBackground = async (file: File) => {
 
           </div>
         )}
+
+
+
+{activePage === "guide-lions-mane" && (
+  <LionsManeGuidePage onNavigate={setActivePage} />
+}}
+
+
+
+
 
         {/* ==========================================
             SCREEN: ADMIN AUTHENTICATION / ACCESS PANEL

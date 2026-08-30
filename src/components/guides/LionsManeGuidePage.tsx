@@ -198,9 +198,11 @@ function GuideImageCard({ src, alt, eyebrow, title, caption, size = "default" }:
     hero: "min-h-[420px] lg:min-h-[520px]",
   } as const;
 
+  const fillHeight = size === "full";
+
   return (
-    <div className="h-full overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm">
-      <div className={`relative h-full overflow-hidden bg-stone-100 ${sizeClass[size]}`}>
+    <div className={`${fillHeight ? "h-full" : ""} overflow-hidden rounded-[2rem] border border-stone-200 bg-white shadow-sm`}>
+      <div className={`relative overflow-hidden bg-stone-100 ${fillHeight ? "h-full" : ""} ${sizeClass[size]}`}>
         <img src={src} alt={alt} loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
         {(eyebrow || title || caption) && <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-stone-950/70 via-stone-900/15 to-transparent" />}
         {(eyebrow || title || caption) && (
@@ -616,7 +618,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
         </div>
       </section>
 
-      <section id="healthy-growth" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+      <section id="healthy-growth" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-8 pb-12 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
             What should it look like?
@@ -625,8 +627,8 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
           <p className="text-base leading-relaxed text-stone-600">Compare healthy growth with the most common warning signs.</p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="space-y-4 rounded-[2rem] border border-emerald-200 bg-white p-6 shadow-sm">
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-4 rounded-[2rem] border border-emerald-200 bg-white p-6 pb-7 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-800">
                 <CheckCircle2 className="h-6 w-6" />
@@ -656,7 +658,7 @@ export default function LionsManeGuidePage({ onNavigate }: LionsManeGuidePagePro
             </ul>
           </div>
 
-          <div className="space-y-4 rounded-[2rem] border border-rose-200 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 rounded-[2rem] border border-rose-200 bg-white p-6 pb-7 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-100 text-rose-800">
                 <AlertTriangle className="h-6 w-6" />

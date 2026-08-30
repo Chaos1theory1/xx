@@ -4,19 +4,24 @@ import {
   ArrowRight,
   BadgeCheck,
   BookOpen,
+  Brain,
   Calculator,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   CircleHelp,
   Droplets,
+  Dumbbell,
   FlaskConical,
   Package,
   ShieldCheck,
+  Sparkles,
   Sprout,
+  Star,
   SunMedium,
   Thermometer,
   TimerReset,
+  Wheat,
   Wind,
   type LucideIcon,
 } from "lucide-react";
@@ -374,56 +379,19 @@ export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" 
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1.02fr_0.98fr] lg:items-start">
-          <div className="space-y-6">
-            <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('Why beginners like it')}</h3>
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {[
-                  "The growth stages are easy to recognise, from white colonisation to compact fruiting clusters.",
-                  "It performs well on hardwood-based substrate, which keeps the starting method clear and consistent.",
-                  "A single fruiting opening usually produces a neat, easy-to-manage first flush.",
-                  "With stable humidity and fresh air, the first harvest can be very rewarding even for a beginner.",
-                ].map((item) => (
-                  <div key={item} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-600">
-                    {t(item)}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
-              <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Nutrition benefits')}</p>
-                <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('A nutritious gourmet mushroom for everyday cooking')}</h3>
-                <p className="text-sm leading-relaxed text-stone-600">
-                  {t("Lion’s Mane is valued for its texture in the kitchen as well as its clean, attractive appearance. It fits easily into simple meals and balanced diets.")}
-                </p>
-              </div>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  {
-                    title: "Naturally light",
-                    text: "A practical ingredient for light meals, with a naturally low-fat profile and a satisfying bite.",
-                  },
-                  {
-                    title: "Contains fibre",
-                    text: "Like other edible mushrooms, it contributes fibre and helps add texture to meals.",
-                  },
-                  {
-                    title: "Useful nutrients",
-                    text: "It naturally contains compounds such as minerals and B-vitamin-related nutrients, depending on how it is grown and prepared.",
-                  },
-                  {
-                    title: "Easy to cook",
-                    text: "Its mild flavour and meaty texture work well for pan-searing, roasting and simple home recipes.",
-                  },
-                ].map((benefit) => (
-                  <div key={benefit.title} className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                    <h4 className="font-display text-lg font-semibold tracking-tight text-stone-900">{t(benefit.title)}</h4>
-                    <p className="mt-2 text-sm leading-relaxed text-stone-600">{t(benefit.text)}</p>
-                  </div>
-                ))}
-              </div>
+          <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm">
+            <h3 className="font-display text-2xl font-bold tracking-tight text-stone-950">{t('Why beginners like it')}</h3>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {[
+                "The growth stages are easy to recognise, from white colonisation to compact fruiting clusters.",
+                "It performs well on hardwood-based substrate, which keeps the starting method clear and consistent.",
+                "A single fruiting opening usually produces a neat, easy-to-manage first flush.",
+                "With stable humidity and fresh air, the first harvest can be very rewarding even for a beginner.",
+              ].map((item) => (
+                <div key={item} className="rounded-2xl border border-stone-200 bg-stone-50 p-4 text-sm leading-relaxed text-stone-600">
+                  {t(item)}
+                </div>
+              ))}
             </div>
           </div>
 
@@ -432,9 +400,88 @@ export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" 
             alt={guideImages.overview.alt}
             eyebrow={t('Know the mushroom')}
             title={t('Healthy Lion’s Mane should look bright, dense and fresh')}
-            caption={t('A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest.')} 
+            caption={t('A mature fruit is usually white, compact and evenly formed, with soft spines developing as it approaches harvest.')}
             size="tall"
           />
+        </div>
+
+        <div className="rounded-[2rem] border border-stone-200 bg-white p-6 shadow-sm sm:p-7 lg:p-8">
+          <div className="max-w-4xl space-y-3">
+            <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
+              {t('Nutrition benefits')}
+            </span>
+            <h3 className="font-display text-3xl font-bold tracking-tight text-stone-950">{t('Much more than a gourmet mushroom')}</h3>
+            <p className="text-base leading-relaxed text-stone-600">
+              {t('Lion’s Mane combines protein, dietary fibre, micronutrients and naturally occurring mushroom compounds. Beyond its culinary appeal, its nutritional profile and distinctive fungal compounds continue to attract scientific interest.')}
+            </p>
+          </div>
+
+          <div className="mt-7 grid gap-4 lg:grid-cols-[repeat(4,minmax(0,1fr))_1.15fr]">
+            {[
+              {
+                icon: Dumbbell,
+                title: 'Protein',
+                text: 'Provides protein as part of its nutritional profile, with the proportion becoming more concentrated in dried mushroom products.',
+              },
+              {
+                icon: Wheat,
+                title: 'Fibre & β-glucans',
+                text: 'Provides dietary fibre together with β-glucans, naturally occurring mushroom polysaccharides that contribute to its nutritional interest.',
+              },
+              {
+                icon: Sparkles,
+                title: 'Vitamins & minerals',
+                text: 'Naturally contains B-group vitamins and minerals such as potassium, zinc and manganese, with levels varying by cultivation and preparation.',
+              },
+              {
+                icon: ShieldCheck,
+                title: 'Bioactive compounds',
+                text: 'Contains ergothioneine, phenolic compounds and other fungal molecules being studied for their biological properties.',
+              },
+            ].map((benefit) => {
+              const Icon = benefit.icon;
+              return (
+                <article key={benefit.title} className="flex min-h-[285px] flex-col rounded-[1.6rem] border border-stone-200 bg-white p-5 shadow-sm">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-800">
+                    <Icon className="h-7 w-7" />
+                  </div>
+                  <h4 className="mt-5 font-display text-base font-bold uppercase tracking-[0.06em] text-stone-950">{t(benefit.title)}</h4>
+                  <div className="mt-3 h-0.5 w-8 bg-emerald-300" />
+                  <p className="mt-4 text-sm leading-relaxed text-stone-600">{t(benefit.text)}</p>
+                </article>
+              );
+            })}
+
+            <aside className="flex min-h-[285px] flex-col rounded-[1.6rem] border border-emerald-200 bg-gradient-to-b from-emerald-50 to-white p-5 shadow-sm">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-emerald-700 shadow-sm">
+                <Star className="h-7 w-7" />
+              </div>
+              <p className="mt-5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">{t('Why it matters')}</p>
+              <h4 className="mt-2 font-display text-xl font-bold tracking-tight text-stone-950">{t('A broad nutritional profile in one mushroom')}</h4>
+              <p className="mt-4 text-sm leading-relaxed text-stone-700">
+                {t('Lion’s Mane brings together protein, fibre, micronutrients and distinctive fungal compounds, helping explain its growing place in functional-food discussions.')}
+              </p>
+            </aside>
+          </div>
+
+          <div className="mt-5 rounded-[1.6rem] border border-sky-200 bg-sky-50/70 p-5 sm:p-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm">
+                <Brain className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-sky-800">{t('Research spotlight')}</p>
+                <h4 className="mt-1 font-display text-xl font-bold tracking-tight text-stone-950">{t('Cognition, focus and emotional wellbeing')}</h4>
+                <p className="mt-2 text-sm leading-relaxed text-stone-700">
+                  {t('Lion’s Mane is being studied for possible effects on cognitive performance, focus, mood and perceived stress. Early human studies are promising, but the evidence is still developing and should not be read as a medical claim.')}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-4 text-xs leading-relaxed text-stone-500">
+            {t('Nutritional composition varies with strain, substrate, growing conditions and processing.')}
+          </p>
         </div>
       </section>
 

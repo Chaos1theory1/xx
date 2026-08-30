@@ -220,6 +220,24 @@ const fr: Record<string, string> = {
   "A practical calculator page for estimating substrate ingredients, hydration and batch size before preparing a grow.": "Un calculateur pratique pour estimer les ingrédients du substrat, son hydratation et la taille du lot avant préparation.",
   "Back to Lion’s Mane Growing Guide": "Retour au guide de culture du Lion’s Mane",
   "Detailed Biotech Agro guidance for this topic will live on this page, keeping the growing guide connected to a clear next step without sending visitors away from the website.": "Cette page accueillera les recommandations détaillées de Biotech Agro sur ce sujet afin de prolonger le guide de culture avec une prochaine étape claire, directement sur le site.",
+  "Much more than a gourmet mushroom": "Bien plus qu’un simple champignon gastronomique",
+  "Lion’s Mane combines protein, dietary fibre, micronutrients and naturally occurring mushroom compounds. Beyond its culinary appeal, its nutritional profile and distinctive fungal compounds continue to attract scientific interest.": "Le Lion’s Mane associe protéines, fibres alimentaires, micronutriments et composés naturellement présents dans les champignons. Au-delà de son intérêt culinaire, son profil nutritionnel et ses composés fongiques spécifiques suscitent un intérêt scientifique croissant.",
+  "Protein": "Protéines",
+  "Provides protein as part of its nutritional profile, with the proportion becoming more concentrated in dried mushroom products.": "Il apporte des protéines dans son profil nutritionnel, avec une proportion naturellement plus concentrée dans les produits à base de champignon séché.",
+  "Fibre & β-glucans": "Fibres & β-glucanes",
+  "Provides dietary fibre together with β-glucans, naturally occurring mushroom polysaccharides that contribute to its nutritional interest.": "Il apporte des fibres alimentaires ainsi que des β-glucanes, des polysaccharides naturellement présents dans les champignons qui renforcent son intérêt nutritionnel.",
+  "Vitamins & minerals": "Vitamines & minéraux",
+  "Naturally contains B-group vitamins and minerals such as potassium, zinc and manganese, with levels varying by cultivation and preparation.": "Il contient naturellement des vitamines du groupe B et des minéraux comme le potassium, le zinc et le manganèse, dont les teneurs varient selon la culture et la préparation.",
+  "Bioactive compounds": "Composés bioactifs",
+  "Contains ergothioneine, phenolic compounds and other fungal molecules being studied for their biological properties.": "Il contient notamment de l’ergothionéine, des composés phénoliques et d’autres molécules fongiques étudiées pour leurs propriétés biologiques.",
+  "Why it matters": "Pourquoi c’est intéressant",
+  "A broad nutritional profile in one mushroom": "Un profil nutritionnel varié dans un seul champignon",
+  "Lion’s Mane brings together protein, fibre, micronutrients and distinctive fungal compounds, helping explain its growing place in functional-food discussions.": "Le Lion’s Mane réunit protéines, fibres, micronutriments et composés fongiques spécifiques, ce qui contribue à son intérêt croissant dans le domaine de l’alimentation fonctionnelle.",
+  "Research spotlight": "Recherche en cours",
+  "Cognition, focus and emotional wellbeing": "Cognition, concentration et équilibre émotionnel",
+  "Lion’s Mane is being studied for possible effects on cognitive performance, focus, mood and perceived stress. Early human studies are promising, but the evidence is still developing and should not be read as a medical claim.": "Le Lion’s Mane fait l’objet de recherches sur ses effets possibles sur les performances cognitives, la concentration, l’humeur et le stress perçu. Les premières études chez l’être humain sont encourageantes, mais les preuves restent en développement et ne doivent pas être interprétées comme une allégation médicale.",
+  "Nutritional composition varies with strain, substrate, growing conditions and processing.": "La composition nutritionnelle varie selon la souche, le substrat, les conditions de culture et la transformation.",
+
 };
 
 const ar: Record<string, string> = {
@@ -442,6 +460,24 @@ const ar: Record<string, string> = {
   "A practical calculator page for estimating substrate ingredients, hydration and batch size before preparing a grow.": "صفحة حاسبة عملية لتقدير مكونات الركيزة والترطيب وحجم الدفعة قبل التحضير.",
   "Back to Lion’s Mane Growing Guide": "العودة إلى دليل زراعة عرف الأسد",
   "Detailed Biotech Agro guidance for this topic will live on this page, keeping the growing guide connected to a clear next step without sending visitors away from the website.": "ستتضمن هذه الصفحة إرشادات Biotech Agro التفصيلية حول هذا الموضوع، لتبقى تجربة التعلم مترابطة داخل الموقع وتقدم للزائر الخطوة التالية بوضوح.",
+  "Much more than a gourmet mushroom": "أكثر من مجرد فطر فاخر للطهي",
+  "Lion’s Mane combines protein, dietary fibre, micronutrients and naturally occurring mushroom compounds. Beyond its culinary appeal, its nutritional profile and distinctive fungal compounds continue to attract scientific interest.": "يجمع فطر عرف الأسد بين البروتين والألياف الغذائية والمغذيات الدقيقة ومركبات فطرية موجودة طبيعياً. وإلى جانب قيمته في الطهي، يواصل ملفه الغذائي ومركباته الفطرية المميزة جذب الاهتمام العلمي.",
+  "Protein": "البروتين",
+  "Provides protein as part of its nutritional profile, with the proportion becoming more concentrated in dried mushroom products.": "يوفر البروتين كجزء من قيمته الغذائية، وتصبح نسبته أكثر تركيزاً في منتجات الفطر المجفف.",
+  "Fibre & β-glucans": "الألياف وبيتا-غلوكان",
+  "Provides dietary fibre together with β-glucans, naturally occurring mushroom polysaccharides that contribute to its nutritional interest.": "يوفر أليافاً غذائية إلى جانب بيتا-غلوكان، وهي سكريات متعددة فطرية موجودة طبيعياً وتساهم في قيمته الغذائية.",
+  "Vitamins & minerals": "الفيتامينات والمعادن",
+  "Naturally contains B-group vitamins and minerals such as potassium, zinc and manganese, with levels varying by cultivation and preparation.": "يحتوي طبيعياً على فيتامينات من مجموعة B ومعادن مثل البوتاسيوم والزنك والمنغنيز، مع اختلاف الكميات حسب ظروف الزراعة والتحضير.",
+  "Bioactive compounds": "المركبات النشطة حيوياً",
+  "Contains ergothioneine, phenolic compounds and other fungal molecules being studied for their biological properties.": "يحتوي على الإرغوثيونين ومركبات فينولية وجزيئات فطرية أخرى يجري بحث خصائصها البيولوجية.",
+  "Why it matters": "لماذا هذا مهم",
+  "A broad nutritional profile in one mushroom": "ملف غذائي متنوع في فطر واحد",
+  "Lion’s Mane brings together protein, fibre, micronutrients and distinctive fungal compounds, helping explain its growing place in functional-food discussions.": "يجمع عرف الأسد البروتين والألياف والمغذيات الدقيقة ومركبات فطرية مميزة، وهو ما يفسر الاهتمام المتزايد به ضمن الأغذية الوظيفية.",
+  "Research spotlight": "محور البحث",
+  "Cognition, focus and emotional wellbeing": "الإدراك والتركيز والتوازن النفسي",
+  "Lion’s Mane is being studied for possible effects on cognitive performance, focus, mood and perceived stress. Early human studies are promising, but the evidence is still developing and should not be read as a medical claim.": "تجري دراسة فطر عرف الأسد لمعرفة تأثيراته المحتملة على الأداء المعرفي والتركيز والمزاج والإحساس بالتوتر. تبدو بعض الدراسات البشرية المبكرة واعدة، لكن الأدلة ما تزال قيد التطور ولا ينبغي اعتبارها ادعاءً طبياً.",
+  "Nutritional composition varies with strain, substrate, growing conditions and processing.": "تختلف التركيبة الغذائية حسب السلالة والركيزة وظروف الزراعة وطريقة المعالجة.",
+
 };
 
 export function guideTranslate(text: string, language: GuideLanguage): string {

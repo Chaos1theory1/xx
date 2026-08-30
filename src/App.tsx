@@ -41,6 +41,7 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import GoogleDriveVault from "./components/GoogleDriveVault";
 import LionsManeGuidePage from "./components/guides/LionsManeGuidePage";
+import GuideResourcePage from "./components/guides/GuideResourcePage";
 import { Product, Service, ContactMessage, SiteContent, DatabaseState, ProductCategory, ProductStatus, TeamMember, Certification, FeatureItem, CatalogSection, GalleryImage } from "./types";
 import { i18n } from "./translations";
 
@@ -676,9 +677,25 @@ export default function App() {
   const [currentLanguage, setCurrentLanguage] = useState<"en" | "fr" | "ar">("fr");
   const [adminFooterLanguage, setAdminFooterLanguage] = useState<"en" | "fr" | "ar">("fr");
   // Page selection: public pages + growing guides + admin
+  const publicRouteMap: Record<string, string> = {
+    home: "/",
+    about: "/about",
+    products: "/products",
+    contact: "/contact",
+    "guide-lions-mane": "/guides/lions-mane-growing-guide",
+    "guide-lions-mane-ready-bag": "/guides/lions-mane-ready-to-inoculate-grow-bag",
+    "guide-substrate-preparation": "/guides/substrate-preparation",
+    "tool-substrate-calculator": "/tools/mushroom-substrate-calculator",
+  };
+
+  const pageFromPath = (pathname: string) => {
+    const match = Object.entries(publicRouteMap).find(([, path]) => path === pathname);
+    return match?.[0] || "home";
+  };
+
   const getInitialPage = () => {
-    if (typeof window !== "undefined" && window.location.pathname === "/guides/lions-mane-growing-guide") {
-      return "guide-lions-mane";
+    if (typeof window !== "undefined") {
+      return pageFromPath(window.location.pathname);
     }
     return "home";
   };
@@ -688,7 +705,7 @@ export default function App() {
     setActivePage(page);
 
     if (typeof window !== "undefined") {
-      const targetPath = page === "guide-lions-mane" ? "/guides/lions-mane-growing-guide" : "/";
+      const targetPath = publicRouteMap[page] || "/";
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ page }, "", targetPath);
       }
@@ -698,7 +715,7 @@ export default function App() {
 
   useEffect(() => {
     const handlePopState = () => {
-      setActivePage(window.location.pathname === "/guides/lions-mane-growing-guide" ? "guide-lions-mane" : "home");
+      setActivePage(pageFromPath(window.location.pathname));
       window.scrollTo({ top: 0, behavior: "auto" });
     };
 
@@ -3792,6 +3809,18 @@ const handleUploadHeroBackground = async (file: File) => {
             ========================================== */}
         {activePage === "guide-lions-mane" && (
           <LionsManeGuidePage onNavigate={handlePageNavigate} />
+        )}
+
+        {activePage === "guide-lions-mane-ready-bag" && (
+          <GuideResourcePage kind="ready-bag" onNavigate={handlePageNavigate} />
+        )}
+
+        {activePage === "guide-substrate-preparation" && (
+          <GuideResourcePage kind="substrate" onNavigate={handlePageNavigate} />
+        )}
+
+        {activePage === "tool-substrate-calculator" && (
+          <GuideResourcePage kind="calculator" onNavigate={handlePageNavigate} />
         )}
 
         {/* ==========================================

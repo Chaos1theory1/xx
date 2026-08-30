@@ -515,6 +515,43 @@ export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" 
         </div>
       </section>
 
+      <section className="mx-auto max-w-7xl px-4 pb-4 pt-1 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-[2rem] border border-emerald-200 bg-gradient-to-r from-emerald-950 via-emerald-900 to-stone-900 shadow-[0_18px_45px_rgba(6,78,59,0.16)]">
+          <div className="grid gap-6 p-6 sm:p-7 lg:grid-cols-[1fr_auto] lg:items-center lg:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-emerald-100 ring-1 ring-white/15">
+                <Package className="h-6 w-6" />
+              </div>
+              <div className="max-w-3xl">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-emerald-300">{t('Product shortcut')}</p>
+                <h3 className="mt-2 font-display text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                  {t('Want the easiest start? Begin with the right gear.')}
+                </h3>
+                <p className="mt-3 text-sm leading-relaxed text-emerald-50/85 sm:text-base">
+                  {t('Skip the guesswork. Start with Lion’s Mane culture, grain spawn and ready-to-inoculate options selected to make your first grow simpler, cleaner and more reliable.')}
+                </p>
+                <p className="mt-3 text-sm font-semibold text-emerald-200">
+                  {t('Less prep. Fewer mistakes. A faster start.')}
+                </p>
+              </div>
+            </div>
+
+            <a
+              href="/products"
+              onClick={(event) => {
+                if (onNavigate) {
+                  event.preventDefault();
+                  onNavigate("products");
+                }
+              }}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 text-sm font-bold text-emerald-950 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-50 lg:w-auto"
+            >
+              {t('Shop starter gear')} <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
       <section id="what-youll-need" className="mx-auto max-w-7xl scroll-mt-24 space-y-8 px-4 py-6 sm:px-6 lg:px-8">
         <div className="max-w-4xl space-y-3">
           <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-800">
@@ -649,26 +686,6 @@ export default function LionsManeGuidePage({ onNavigate, currentLanguage = "en" 
                   <NoteBox type={step.noteType} title={t(step.noteTitle)} text={t(step.noteText)} />
                 ) : null}
 
-                {step.step === "02" ? (
-                  <div className="rounded-2xl border border-stone-200 bg-stone-50 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-stone-500">{t('Product shortcut')}</p>
-                    <h4 className="mt-2 font-display text-lg font-semibold text-stone-900">{t('Need starter materials?')}</h4>
-                    <p className="mt-1 text-sm leading-relaxed text-stone-600">
-                      <a
-                        href="/products"
-                        onClick={(event) => {
-                          if (onNavigate) {
-                            event.preventDefault();
-                            onNavigate("products");
-                          }
-                        }}
-                        className="font-medium text-emerald-800 underline decoration-emerald-300 underline-offset-4 transition hover:text-emerald-900"
-                      >
-                        {t("View Lion’s Mane cultures, grain spawn and ready-to-inoculate options on the Products page.")}
-                      </a>
-                    </p>
-                  </div>
-                ) : null}
 
                 {step.step === "04" ? (
                   <div className="grid gap-3 sm:grid-cols-3">

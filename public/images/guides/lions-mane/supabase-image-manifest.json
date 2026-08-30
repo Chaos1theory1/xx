@@ -1,0 +1,61 @@
+{
+  "folder": "public/images/guides/lions-mane",
+  "recommendedSupabaseStoragePath": "guides/lions-mane/",
+  "placeholders": [
+    {
+      "section": "Hero",
+      "file": "hero-overview.avif",
+      "usage": "Main hero image"
+    },
+    {
+      "section": "Overview",
+      "file": "overview-benefits.avif",
+      "usage": "What Are Lion's Mane Mushrooms / nutrition overview image"
+    },
+    {
+      "section": "What you'll need",
+      "file": "what-youll-need.avif",
+      "usage": "Starter materials image"
+    },
+    {
+      "section": "Step 01",
+      "file": "step-01-choose-route.avif",
+      "usage": "Choose your starting route"
+    },
+    {
+      "section": "Step 02",
+      "file": "step-02-inoculate.avif",
+      "usage": "Inoculation image"
+    },
+    {
+      "section": "Step 03",
+      "file": "step-03-colonise.avif",
+      "usage": "Colonisation image"
+    },
+    {
+      "section": "Step 04",
+      "file": "step-04-fruiting-conditions.avif",
+      "usage": "Fruiting conditions image"
+    },
+    {
+      "section": "Step 05",
+      "file": "step-05-pins-and-growth.avif",
+      "usage": "Pins and early growth image"
+    },
+    {
+      "section": "Step 06",
+      "file": "step-06-harvest.avif",
+      "usage": "Harvest image"
+    },
+    {
+      "section": "Healthy growth",
+      "file": "healthy-growth.avif",
+      "usage": "Healthy example image"
+    },
+    {
+      "section": "Warning signs",
+      "file": "warning-signs.avif",
+      "usage": "Contamination/warning example image"
+    }
+  ]
+}

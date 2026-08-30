@@ -40,9 +40,10 @@ import {
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import GoogleDriveVault from "./components/GoogleDriveVault";
+import LionsManeGuidePage from "./components/guides/LionsManeGuidePage";
 import { Product, Service, ContactMessage, SiteContent, DatabaseState, ProductCategory, ProductStatus, TeamMember, Certification, FeatureItem, CatalogSection, GalleryImage } from "./types";
 import { i18n } from "./translations";
-import LionsManeGuidePage from "./components/guides/LionsManeGuidePage";
+
 
 // Floating-overlay or in-place inline text editor for admin live editing
 function EditableText({
@@ -674,8 +675,36 @@ const defaultTeamFallbacks: TeamMember[] = [
 export default function App() {
   const [currentLanguage, setCurrentLanguage] = useState<"en" | "fr" | "ar">("fr");
   const [adminFooterLanguage, setAdminFooterLanguage] = useState<"en" | "fr" | "ar">("fr");
-  // Page selection: 'home', 'about', 'products', 'contact', 'admin'
-  const [activePage, setActivePage] = useState<string>("home");
+  // Page selection: public pages + growing guides + admin
+  const getInitialPage = () => {
+    if (typeof window !== "undefined" && window.location.pathname === "/guides/lions-mane-growing-guide") {
+      return "guide-lions-mane";
+    }
+    return "home";
+  };
+  const [activePage, setActivePage] = useState<string>(getInitialPage);
+
+  const handlePageNavigate = (page: string) => {
+    setActivePage(page);
+
+    if (typeof window !== "undefined") {
+      const targetPath = page === "guide-lions-mane" ? "/guides/lions-mane-growing-guide" : "/";
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ page }, "", targetPath);
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setActivePage(window.location.pathname === "/guides/lions-mane-growing-guide" ? "guide-lions-mane" : "home");
+      window.scrollTo({ top: 0, behavior: "auto" });
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [armedTeamMemberDeleteId, setArmedTeamMemberDeleteId] = useState<string | null>(null);
   const [activeAboutIconPicker, setActiveAboutIconPicker] = useState<"mission" | "vision" | null>(null);
   const [activeGrowerIconPicker, setActiveGrowerIconPicker] = useState<number | null>(null);
@@ -2534,7 +2563,7 @@ const handleUploadHeroBackground = async (file: File) => {
         {/* GLOBAL NAVBAR */}
       <Navbar
         activePage={activePage}
-        onNavigate={setActivePage}
+        onNavigate={handlePageNavigate}
         isAdminLoggedIn={isAdminLoggedIn}
         onLogout={handleLogout}
         logoUrl={siteContent?.logoUrl}
@@ -3756,6 +3785,13 @@ const handleUploadHeroBackground = async (file: File) => {
             </div>
             </section>
           </div>
+        )}
+
+        {/* ==========================================
+            SCREEN: LION'S MANE GROWING GUIDE
+            ========================================== */}
+        {activePage === "guide-lions-mane" && (
+          <LionsManeGuidePage onNavigate={handlePageNavigate} />
         )}
 
         {/* ==========================================
@@ -5316,12 +5352,6 @@ const handleUploadHeroBackground = async (file: File) => {
           </div>
         )}
 
-
-
-
-
-
-
         {/* ==========================================
             SCREEN: ADMIN AUTHENTICATION / ACCESS PANEL
             ========================================== */}
@@ -6833,7 +6863,7 @@ const handleUploadHeroBackground = async (file: File) => {
 
       {/* GLOBAL SUSTAINABLE FOOTER */}
       <Footer
-        onNavigate={setActivePage}
+        onNavigate={handlePageNavigate}
         contactEmail={siteContent?.contactDetails?.[`email_${currentLanguage}`] || siteContent?.contactDetails?.email}
         contactPhone={siteContent?.contactDetails?.[`phone_${currentLanguage}`] || siteContent?.contactDetails?.phone}
         contactAddress={siteContent?.contactDetails?.[`address_${currentLanguage}`] || siteContent?.contactDetails?.address}

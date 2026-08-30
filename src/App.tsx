@@ -5318,10 +5318,6 @@ const handleUploadHeroBackground = async (file: File) => {
 
 
 
-{activePage === "guide-lions-mane" && (
-  <LionsManeGuidePage onNavigate={setActivePage} />
-}}
-
 
 
 
